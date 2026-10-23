@@ -12,6 +12,19 @@ opencode: finished work on the login redirect fix
 opencode: question about which database to target
 ```
 
+## Recommended TTS: pdg
+
+[`pdg`](https://github.com/akhenakh/pdg) is the default and the recommended engine. It is a single
+static binary that runs on CPU and starts streaming audio after the first short sentence (~50–130 ms
+on a desktop CPU). That is exactly what a turn-end notification needs: the user hears the point
+before the rest of the sentence is synthesized.
+
+Install it from the [pdg repository](https://github.com/akhenakh/pdg) (release archive for Linux,
+macOS, and Windows, or `brew install akhenakh/tap/pdg` on macOS), then leave `command` at its
+default `["pdg"]`.
+
+Other TTS commands work too; see [Options](#options).
+
 ## How it works
 
 1. The plugin registers an `announce` tool and injects a short policy into the system prompt of
@@ -71,7 +84,7 @@ file (or set `"enabled": false` when using the package form) to turn announcemen
 | `maxFirstSentenceWords` | `9` | Maximum words in the first sentence. `pdg` starts streaming after it. |
 | `enabled` | `true` | Load the plugin without announcing. |
 
-Any TTS command works, not only `pdg`:
+Other commands work too, though [`pdg`](https://github.com/akhenakh/pdg) is recommended:
 
 ```jsonc
 // espeak-ng reads the sentence from argv
