@@ -46,18 +46,19 @@ As a package, once published:
 }
 ```
 
-For local development, point a plugin directory at this checkout. OpenCode loads
-`.opencode/plugins/*/index.ts` automatically:
+For local development, point a plugin file at this checkout. OpenCode loads
+`.opencode/plugins/*` automatically (per project), and `~/.config/opencode/plugins/*` globally:
 
 ```sh
-mkdir -p .opencode/plugins/voice-over
-cat > .opencode/plugins/voice-over/index.ts <<EOF
+mkdir -p ~/.config/opencode/plugins
+cat > ~/.config/opencode/plugins/voice-over.ts <<EOF
 export { default } from "$PWD/src/index.ts"
 EOF
 ```
 
-Using a directory means options cannot be passed through `opencode.json`; the defaults below apply
-unless you change them in the source.
+A real directory with an `index.ts` works too. Re-exported plugins cannot receive
+`opencode.json` options; the defaults below apply unless you change them in the source. Remove the
+file (or set `"enabled": false` when using the package form) to turn announcements off.
 
 ## Options
 
