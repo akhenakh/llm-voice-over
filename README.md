@@ -1,7 +1,6 @@
 # opencode-voice-over
 
-Spoken turn-end notifications for [OpenCode](https://opencode.ai) 2, synthesized with
-[`pdg`](https://github.com/akhenakh/pdg) by default.
+Spoken turn-end notifications for [OpenCode](https://opencode.ai) 2.
 
 The plugin announces only turns worth coming back for, keeps the spoken text short enough for
 `pdg` to start streaming quickly, and lets the model phrase the subject instead of reading its
