@@ -37,8 +37,9 @@ Other TTS commands work too; see [Options](#options).
 5. Child sessions (subagents) never announce: the tool is removed from their requests and their
    completions are ignored.
 
-The model is told not to announce interrupting questions asked mid-work, phase milestones, or a
-turn that ends while a long task it started is still running.
+The model announces only when the user has a reason to come back: the task is done, it is blocked
+on an answer, or a long task started earlier has finished. It skips ordinary chat turns,
+milestones, mid-work questions, and turns that end while a long task is still running.
 
 ## Install
 
