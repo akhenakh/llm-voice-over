@@ -1,0 +1,68 @@
+import { describe, expect, test } from "bun:test";
+
+import type { Config } from "./config.js";
+import { cleanAbout, compose, validate } from "./message.js";
+
+const config: Config = {
+  name: "opencode",
+  command: ["pdg"],
+  input: "arg",
+  maxWords: 20,
+  maxFirstSentenceWords: 9,
+  enabled: true,
+};
+
+describe("compose", () => {
+  test("uses the notification templates", () => {
+    expect(compose("opencode", "finished", "the login redirect fix")).toBe(
+      "opencode: finished work on the login redirect fix",
+    );
+    expect(compose("opencode", "question", "which database to target")).toBe(
+      "opencode: question about which database to target",
+    );
+  });
+
+  test("omits the prefix when the name is empty", () => {
+    expect(compose("", "finished", "the build")).toBe("finished work on the build");
+  });
+});
+
+describe("cleanAbout", () => {
+  test("collapses whitespace and drops trailing punctuation", () => {
+    expect(cleanAbout("  the   migration, and its tests.  ")).toBe("the migration, and its tests");
+  });
+});
+
+describe("validate", () => {
+  const check = (about: string) => validate(about, compose("opencode", "finished", about), config);
+
+  test("accepts a short spoken phrase", () => {
+    expect(check("the login redirect fix")).toBeUndefined();
+  });
+
+  test("rejects code, paths and underscores", () => {
+    expect(check("the src/index.ts change")).toContain("code, a path");
+    expect(check("the user_id rename")).toContain("code, a path");
+  });
+
+  test("rejects a long first sentence", () => {
+    const reason = check("the login redirect fix and the two failing tests that came with it");
+    expect(reason).toContain("first sentence");
+  });
+
+  test("accepts a short first sentence followed by a second one", () => {
+    const about = "the login fix. All tests pass";
+    expect(validate(about, compose("opencode", "finished", about), config)).toBeUndefined();
+  });
+
+  test("rejects an announcement over the total word limit", () => {
+    const tight = { ...config, maxWords: 6 };
+    expect(validate("the login fix", compose("opencode", "finished", "the login fix"), tight)).toContain(
+      "the limit is 6",
+    );
+  });
+
+  test("rejects a single absurdly long token", () => {
+    expect(check("Supercalifragilisticexpialidocious refactor")).toContain("long token");
+  });
+});
