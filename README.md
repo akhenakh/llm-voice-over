@@ -43,14 +43,20 @@ milestones, mid-work questions, and turns that end while a long task is still ru
 
 ## Install
 
-As a package, once published:
+```sh
+opencode plugin add git+https://github.com/akhenakh/llm-voice-over.git
+```
+
+This adds the plugin to your global OpenCode config with the default options. To set options, edit
+the entry it writes, keeping the same git spec as `package` (or add the object to the `plugins`
+array of a project `opencode.json`):
 
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
   "plugins": [
     {
-      "package": "opencode-voice-over",
+      "package": "git+https://github.com/akhenakh/llm-voice-over.git",
       "options": {
         "name": "opencode"
       }
@@ -59,7 +65,7 @@ As a package, once published:
 }
 ```
 
-For local development, point a plugin file at this checkout. OpenCode loads
+For local development, re-export the checkout from a plugin file instead. OpenCode loads
 `.opencode/plugins/*` automatically (per project), and `~/.config/opencode/plugins/*` globally:
 
 ```sh
@@ -71,7 +77,8 @@ EOF
 
 A real directory with an `index.ts` works too. Re-exported plugins cannot receive
 `opencode.json` options; the defaults below apply unless you change them in the source. Remove the
-file (or set `"enabled": false` when using the package form) to turn announcements off.
+file, or run `opencode plugin remove git+https://github.com/akhenakh/llm-voice-over.git`, or set
+`"enabled": false`, to turn announcements off.
 
 ## Options
 
