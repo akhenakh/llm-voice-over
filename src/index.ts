@@ -4,7 +4,7 @@ import { Plugin } from "@opencode/plugin";
 
 import { resolveConfig } from "./config.js";
 import { instructions, toolDescription } from "./instructions.js";
-import { cleanAbout, compose, isKind, validate } from "./message.js";
+import { cleanAbout, compose, isKind, permissionAbout, validate } from "./message.js";
 import { Player } from "./player.js";
 
 const TOOL = "announce";
@@ -129,6 +129,20 @@ export default Plugin.define({
             const { sessionID } = event.data;
             debug("event", event.type, sessionID, pending.has(sessionID) ? "pending" : "nothing pending");
             onTurnEnd(sessionID);
+            break;
+          }
+
+          case "permission.asked": {
+            // The turn is suspended until the user answers, so the model cannot
+            // announce it at the end of its turn: speak it as soon as it appears.
+            const { sessionID, action } = event.data;
+            if (!(await isPrimary(sessionID))) {
+              debug("event", event.type, sessionID, "child session, staying quiet");
+              break;
+            }
+            const text = compose(config.name, "permission", permissionAbout(action));
+            debug("event", event.type, sessionID, "speaking", text);
+            player.speak(text);
             break;
           }
         }

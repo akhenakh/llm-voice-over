@@ -19,7 +19,8 @@ Do not announce:
 - every turn: one-line answers, quick lookups, small edits, and chat replies are not worth speaking;
 - an intermediate milestone or the end of a phase of a larger task; announce when the task is actually done;
 - a turn that ends while a long task is still running; announce the turn that consumes its result;
-- a question you ask and then keep working past.
+- a question you ask and then keep working past;
+- a permission prompt: the plugin speaks those itself the moment they appear.
 
 Write \`about\` as a short noun phrase for speech: 2 to 7 plain words, no code, file paths, versions, identifiers, or punctuation. TTS streams audio once the first sentence is ready, so the first sentence must stay under ${config.maxFirstSentenceWords} words and the whole announcement under ${config.maxWords}. Shorter is better. The plugin rejects longer text; rewrite it shorter and call \`announce\` again.
 
@@ -31,5 +32,5 @@ Examples:
 }
 
 export function toolDescription(config: Config): string {
-  return `Announce the end of this turn out loud when the user has a reason to come back: the task is done, you are blocked on their answer, or a long task you started earlier has finished. Do not announce every turn: skip chat replies, quick lookups, small edits, phase milestones, mid-work questions, and turns that end while a long task is still running. \`about\` is a 2-7 word plain-language noun phrase with no code or paths; the first sentence must stay under ${config.maxFirstSentenceWords} words and the whole announcement under ${config.maxWords}.`;
+  return `Announce the end of this turn out loud when the user has a reason to come back: the task is done, you are blocked on their answer, or a long task you started earlier has finished. Do not announce every turn: skip chat replies, quick lookups, small edits, phase milestones, mid-work questions, permission prompts (the plugin speaks those itself), and turns that end while a long task is still running. \`about\` is a 2-7 word plain-language noun phrase with no code or paths; the first sentence must stay under ${config.maxFirstSentenceWords} words and the whole announcement under ${config.maxWords}.`;
 }

@@ -9,6 +9,7 @@ whole answer out loud.
 ```
 opencode: finished work on the login redirect fix
 opencode: question about which database to target
+opencode: needs permission to run a command
 ```
 
 ## Recommended TTS: pdg
@@ -34,12 +35,17 @@ Other TTS commands work too; see [Options](#options).
    composes the fixed sentence, and queues it.
 4. When the turn ends (`session.execution.succeeded`), the queued sentence is spoken. If the turn
    fails or is interrupted, the queue is dropped.
-5. Child sessions (subagents) never announce: the tool is removed from their requests and their
-   completions are ignored.
+5. Permission prompts (`permission.asked`) are spoken the moment they appear, because the turn stays
+   suspended until the user answers and the model cannot announce it. The plugin phrases the request
+   from the permission action (`needs permission to run a command`, `needs permission to edit files`)
+   instead of reading paths or commands out loud.
+6. Child sessions (subagents) never announce: the tool is removed from their requests and their
+   completions and permission prompts are ignored.
 
 The model announces only when the user has a reason to come back: the task is done, it is blocked
 on an answer, or a long task started earlier has finished. It skips ordinary chat turns,
-milestones, mid-work questions, and turns that end while a long task is still running.
+milestones, mid-work questions, and turns that end while a long task is still running. Permission
+prompts do not wait for the model: they interrupt the turn, so the plugin speaks them immediately.
 
 ## Install
 

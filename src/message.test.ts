@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import type { Config } from "./config.js";
-import { cleanAbout, compose, validate } from "./message.js";
+import { cleanAbout, compose, isKind, permissionAbout, validate } from "./message.js";
 
 const config: Config = {
   name: "opencode",
@@ -24,6 +24,34 @@ describe("compose", () => {
 
   test("omits the prefix when the name is empty", () => {
     expect(compose("", "finished", "the build")).toBe("finished work on the build");
+  });
+
+  test("speaks permission prompts from the action", () => {
+    expect(compose("opencode", "permission", permissionAbout("shell"))).toBe(
+      "opencode: needs permission to run a command",
+    );
+    expect(compose("opencode", "permission", permissionAbout("edit"))).toBe(
+      "opencode: needs permission to edit files",
+    );
+  });
+});
+
+describe("permissionAbout", () => {
+  test("maps known actions to plain verb phrases", () => {
+    expect(permissionAbout("read")).toBe("read files");
+    expect(permissionAbout("webfetch")).toBe("fetch a web page");
+  });
+
+  test("stays generic for user-defined actions", () => {
+    expect(permissionAbout("mcp__github__*")).toBe("continue");
+  });
+});
+
+describe("isKind", () => {
+  test("accepts only the kinds the model may pass", () => {
+    expect(isKind("finished")).toBe(true);
+    expect(isKind("question")).toBe(true);
+    expect(isKind("permission")).toBe(false);
   });
 });
 

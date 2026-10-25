@@ -8,10 +8,36 @@ import type { Config } from "./config.js";
 
 export type Kind = "finished" | "question";
 
-const TEMPLATE: Record<Kind, string> = {
+/** The model picks the first two; the plugin speaks permission prompts itself. */
+export type SpokenKind = Kind | "permission";
+
+const TEMPLATE: Record<SpokenKind, string> = {
   finished: "finished work on",
   question: "question about",
+  permission: "needs permission to",
 };
+
+/** Permission actions, as plain verb phrases that read well out loud. */
+const ACTION: Record<string, string> = {
+  shell: "run a command",
+  edit: "edit files",
+  read: "read files",
+  glob: "search the project",
+  grep: "search the project",
+  webfetch: "fetch a web page",
+  websearch: "search the web",
+  browser: "use the browser",
+  question: "ask a question",
+  agent: "start a subagent",
+};
+
+/**
+ * The action is usually a tool name, but users can configure their own
+ * permission patterns. Unknown actions stay generic instead of being read out.
+ */
+export function permissionAbout(action: string): string {
+  return ACTION[action] ?? "continue";
+}
 
 /** Code, paths and identifiers do not read well out loud. */
 const SPEECH_UNFRIENDLY = /[`\\/{}<>_|]/;
@@ -29,7 +55,7 @@ export function cleanAbout(about: string): string {
     .replace(/[.,;:!]+$/, "");
 }
 
-export function compose(name: string, kind: Kind, about: string): string {
+export function compose(name: string, kind: SpokenKind, about: string): string {
   const phrase = `${TEMPLATE[kind]} ${cleanAbout(about)}`;
   return name ? `${name}: ${phrase}` : phrase;
 }
