@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { parsePromptRecord, promptShows, type PromptRecord } from "./prompt.js";
+import { parsePromptRecord, promptShows, questionShows, type PromptRecord } from "./prompt.js";
 
 const SHOWN: PromptRecord = { mode: "default", tool: "Bash", fromAgent: false };
 
@@ -50,5 +50,27 @@ describe("promptShows", () => {
     expect(promptShows({ ...SHOWN, tool: "AskUserQuestion" })).toBe(false);
     // Auto mode asks the same way, so both filters would keep it quiet.
     expect(promptShows({ mode: "auto", tool: "AskUserQuestion", fromAgent: false })).toBe(false);
+  });
+});
+
+describe("questionShows", () => {
+  const QUESTION: PromptRecord = { mode: "default", tool: "AskUserQuestion", fromAgent: false };
+
+  test("speaks for the question dialog, auto mode included", () => {
+    for (const mode of ["default", "acceptEdits", "plan", "auto", "bypassPermissions"]) {
+      expect(questionShows({ ...QUESTION, mode })).toBe(true);
+    }
+  });
+
+  test("stays quiet when dontAsk denies the question", () => {
+    expect(questionShows({ ...QUESTION, mode: "dontAsk" })).toBe(false);
+  });
+
+  test("stays quiet when a subagent asks", () => {
+    expect(questionShows({ ...QUESTION, fromAgent: true })).toBe(false);
+  });
+
+  test("stays quiet for a permission prompt", () => {
+    expect(questionShows(SHOWN)).toBe(false);
   });
 });

@@ -12,6 +12,11 @@
  * the engine, along with its mode and tool; `tool.check` speaks only for the
  * records `promptShows` accepts, those a person really answers.
  *
+ * A question dialog (`AskUserQuestion`) asks the same way but keeps the turn
+ * open until it is answered, so the model's `announce` would only play after
+ * the answer. It is spoken when `questionShows` accepts its record, in auto
+ * mode too, by the headers the dialog shows.
+ *
  * Playback is a one-shot `$.process.run` per utterance, chained so that a
  * permission prompt never talks over the sentence before it. A mod has no
  * handle on a running child, so a new announcement waits for the current one
@@ -28,10 +33,17 @@ import {
   compose,
   isKind,
   permissionPhrases,
+  questionText,
   validate,
   type PermissionAsk,
 } from "../src/core/message";
-import { parsePromptRecord, promptShows } from "../src/core/prompt";
+import {
+  parsePromptRecord,
+  promptShows,
+  QUESTIONS,
+  questionShows,
+  type PromptRecord,
+} from "../src/core/prompt";
 
 /** Must match `name` in `.claude-plugin/plugin.json`: Claude calls `mcp__<plugin>__announce`. */
 const PLUGIN = "voice-over";
@@ -134,15 +146,15 @@ function queueAsk($: EngineInterface, ask: PermissionAsk, config: Config, enable
 }
 
 /**
- * Speaks once the classic hook records a prompt a person really answers.
- * `$.clock.after` returns at once, so the dialog is never held back.
+ * Calls `speak` once the classic hook records a dialog `shows` accepts, one a
+ * person really answers. `$.clock.after` returns at once, so the dialog is
+ * never held back.
  */
 function watchForPrompt(
   $: EngineInterface,
   path: string,
-  ask: PermissionAsk,
-  config: Config,
-  enabled: boolean,
+  shows: (record: PromptRecord) => boolean,
+  speak: (record: PromptRecord) => void,
 ): void {
   let spoken = false;
   for (const delay of PROMPT_CHECKS_MS) {
@@ -155,10 +167,9 @@ function watchForPrompt(
         return;
       }
       const record = parsePromptRecord(signal);
-      if (record === undefined || !promptShows(record)) return;
+      if (record === undefined || !shows(record)) return;
       spoken = true;
-      debug($, enabled, "permission prompt", ask.action, record.mode);
-      queueAsk($, ask, config, enabled);
+      speak(record);
     });
   }
 }
@@ -257,7 +268,20 @@ export const register: Register = (on, options) => {
     } catch {
       return decided;
     }
-    watchForPrompt($, path, { action: call.tool, resources: commandResources(event.input) }, config, debugEnabled);
+    if (QUESTIONS.has(call.tool)) {
+      // The turn waits on the answer, so the model cannot announce it at its end.
+      const text = questionText(config.name, event.input, config);
+      watchForPrompt($, path, questionShows, (record) => {
+        debug($, debugEnabled, "question", record.mode, text);
+        play($, config, debugEnabled, text);
+      });
+      return decided;
+    }
+    const ask = { action: call.tool, resources: commandResources(event.input) };
+    watchForPrompt($, path, promptShows, (record) => {
+      debug($, debugEnabled, "permission prompt", ask.action, record.mode);
+      queueAsk($, ask, config, debugEnabled);
+    });
     return decided;
   }).catch((_$, event, next) => next(event));
 };

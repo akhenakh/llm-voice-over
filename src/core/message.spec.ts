@@ -1,7 +1,15 @@
 import { describe, expect, test } from "bun:test";
 
 import type { Config } from "./config.js";
-import { cleanAbout, compose, isKind, permissionAbout, permissionPhrases, validate } from "./message.js";
+import {
+  cleanAbout,
+  compose,
+  isKind,
+  permissionAbout,
+  permissionPhrases,
+  questionText,
+  validate,
+} from "./message.js";
 
 const config: Config = {
   name: "opencode",
@@ -150,5 +158,26 @@ describe("validate", () => {
 
   test("rejects a single absurdly long token", () => {
     expect(check("Supercalifragilisticexpialidocious refactor")).toContain("long token");
+  });
+});
+
+describe("questionText", () => {
+  const ask = (...headers: unknown[]) => ({ questions: headers.map((header) => ({ question: "?", header })) });
+
+  test("names the dialog by its header", () => {
+    expect(questionText("claude", ask("DuckDB"), config)).toBe("claude: question about DuckDB");
+  });
+
+  test("lists the distinct headers of several questions", () => {
+    expect(questionText("claude", ask("Auth method", "Library", "library"), config)).toBe(
+      "claude: question about Auth method and Library",
+    );
+  });
+
+  test("falls back to a generic phrase when no header can be read out", () => {
+    expect(questionText("claude", ask("src/auth.ts"), config)).toBe("claude: question about a decision");
+    expect(questionText("claude", ask(42), config)).toBe("claude: question about a decision");
+    expect(questionText("claude", {}, config)).toBe("claude: question about a decision");
+    expect(questionText("claude", undefined, config)).toBe("claude: question about a decision");
   });
 });

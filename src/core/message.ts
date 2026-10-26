@@ -203,6 +203,34 @@ export function permissionPhrases(asks: readonly PermissionAsk[]): string {
   return joinList(phrases) || "continue";
 }
 
+/** Spoken when a question dialog's headers cannot be read out as written. */
+const QUESTION_FALLBACK = "a decision";
+
+/**
+ * The sentence for a question dialog, e.g. `claude: question about DuckDB`.
+ * The dialog's short headers name it; the questions themselves are too long to
+ * stream quickly, and a header that is not speakable falls back to a generic
+ * phrase rather than silence.
+ */
+export function questionText(name: string, input: unknown, config: Config): string {
+  const questions = (input as { questions?: unknown } | undefined)?.questions;
+  const headers = new Map<string, string>();
+  if (Array.isArray(questions)) {
+    for (const question of questions) {
+      const header = (question as { header?: unknown } | undefined)?.header;
+      if (typeof header !== "string") continue;
+      const cleaned = cleanAbout(header);
+      const key = cleaned.toLowerCase();
+      if (cleaned && !headers.has(key)) headers.set(key, cleaned);
+    }
+  }
+
+  const about = cleanAbout(joinList([...headers.values()]));
+  const text = compose(name, "question", about);
+  if (about && validate(about, text, config) === undefined) return text;
+  return compose(name, "question", QUESTION_FALLBACK);
+}
+
 export function isKind(value: unknown): value is Kind {
   return value === "finished" || value === "question";
 }

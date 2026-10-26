@@ -176,14 +176,47 @@ test("stays silent when the permission mode answers the ask itself", async ($, o
   expect(runs).toEqual([]);
 });
 
-test("stays silent when the ask is a question", async ($, on) => {
+const QUESTION_INPUT = {
+  questions: [{ question: "Should the aggregations run in DuckDB?", header: "DuckDB", options: [] }],
+};
+
+test("speaks a question dialog by its header, auto mode included", async ($, on) => {
   const { runs, files, clock } = harness(on);
   on("tool.check", () => ({ decision: "ask" }));
 
   await $.session.start({ surface: "terminal", isInteractive: true, cwd: "/work" });
-  await $.tool.check({ tool: "AskUserQuestion", input: {}, tool_use_id: "toolu_1" });
-  // The question dialog is the ask; no permission prompt is drawn for the tool.
-  files.set(PROMPT_SIGNAL, record("default", "AskUserQuestion"));
+  for (const mode of ["default", "auto"]) {
+    await $.tool.check({ tool: "AskUserQuestion", input: QUESTION_INPUT, tool_use_id: "toolu_1" });
+    // The question dialog is the ask; it is spoken as a question, not a permission prompt.
+    files.set(PROMPT_SIGNAL, record(mode, "AskUserQuestion"));
+    await clock.advance(2000);
+    await settle();
+  }
+
+  const spoken = { argv: ["pdg", "claude: question about DuckDB"], init: { timeoutMs: 120_000 } };
+  expect(runs).toEqual([spoken, spoken]);
+});
+
+test("stays silent when dontAsk denies a question", async ($, on) => {
+  const { runs, files, clock } = harness(on);
+  on("tool.check", () => ({ decision: "ask" }));
+
+  await $.session.start({ surface: "terminal", isInteractive: true, cwd: "/work" });
+  await $.tool.check({ tool: "AskUserQuestion", input: QUESTION_INPUT, tool_use_id: "toolu_1" });
+  files.set(PROMPT_SIGNAL, record("dontAsk", "AskUserQuestion"));
+  await clock.advance(2000);
+  await settle();
+
+  expect(runs).toEqual([]);
+});
+
+test("stays silent when a subagent asks a question", async ($, on) => {
+  const { runs, files, clock } = harness(on);
+  on("tool.check", () => ({ decision: "ask" }));
+
+  await $.session.start({ surface: "terminal", isInteractive: true, cwd: "/work" });
+  await $.tool.check({ tool: "AskUserQuestion", input: QUESTION_INPUT, tool_use_id: "toolu_1" });
+  files.set(PROMPT_SIGNAL, record("default", "AskUserQuestion", "agent-1"));
   await clock.advance(2000);
   await settle();
 

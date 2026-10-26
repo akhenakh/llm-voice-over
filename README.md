@@ -48,6 +48,10 @@ Other TTS commands work too; see [Options](#options).
    to show, and asking a question shows the question itself. A small `PermissionRequest` hook
    (`hooks/permission.sh`) records the ask with the session's mode and the tool; the mod speaks only
    when that record is one a person answers in a dialog.
+   A question dialog (`AskUserQuestion`) keeps the turn open until it is answered, so it is spoken
+   the same way, by the dialog's short headers (`question about DuckDB`). Unlike a permission
+   prompt it is spoken in auto mode too, since the classifier never answers a question; only
+   `dontAsk`, which denies it, and subagents stay quiet.
 6. Child sessions (subagents) never announce: the tool is removed from their requests in OpenCode
    and refused in Claude Code, and their completions and permission prompts are ignored.
 

@@ -21,7 +21,7 @@ Do not announce:
 - an intermediate milestone or the end of a phase of a larger task; announce when the task is actually done;
 - a turn that ends while a long task is still running; announce the turn that consumes its result;
 - a question you ask and then keep working past;
-- a permission prompt: the plugin speaks those itself the moment they appear.
+- a permission prompt or a question dialog: the plugin speaks those itself the moment they appear.
 
 Write \`about\` as a short noun phrase for speech: 2 to 7 plain words, no code, file paths, versions, identifiers, or punctuation. TTS streams audio once the first sentence is ready, so the first sentence must stay under ${config.maxFirstSentenceWords} words and the whole announcement under ${config.maxWords}. Shorter is better. The plugin rejects longer text; rewrite it shorter and call \`announce\` again.
 
