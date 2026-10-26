@@ -3,6 +3,7 @@
   "version": "0.2.0",
   "type": "module",
   "description": "Spoken turn-end notifications for OpenCode and Claude Code, streamed through pdg",
+  "license": "MIT",
   "exports": {
     ".": "./src/index.ts"
   },

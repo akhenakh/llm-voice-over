@@ -3,6 +3,7 @@
   "displayName": "Voice Over",
   "version": "0.2.0",
   "description": "Spoken turn-end notifications for Claude Code, streamed through pdg.",
+  "license": "MIT",
   "author": {
     "name": "Fabrice Aneche"
   },
