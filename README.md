@@ -44,9 +44,10 @@ Other TTS commands work too; see [Options](#options).
    chains of the command; other prompts use the tool name (`needs permission to edit files`) rather
    than reading paths out loud. Calls that ask in the same burst, as parallel tool calls do, are
    collected briefly and spoken as one sentence. In Claude Code an ask is not a prompt by itself:
-   auto mode and `dontAsk` answer it without showing a dialog, so a small `PermissionRequest` hook
-   (`hooks/permission.sh`) records the prompts that are really on screen and the mod speaks only
-   for those.
+   auto mode's classifier and `dontAsk` answer it without showing a dialog, a headless run has none
+   to show, and asking a question shows the question itself. A small `PermissionRequest` hook
+   (`hooks/permission.sh`) records the ask with the session's mode and the tool; the mod speaks only
+   when that record is one a person answers in a dialog.
 6. Child sessions (subagents) never announce: the tool is removed from their requests in OpenCode
    and refused in Claude Code, and their completions and permission prompts are ignored.
 

@@ -8,9 +8,9 @@
  * Permission prompts are the awkward case. `tool.check` resolves to `ask`
  * before the permission mode decides what to do with that ask, so auto mode
  * (and `dontAsk`) answer it without ever showing a dialog. The classic
- * `PermissionRequest` hook in `hooks/hooks.json` runs only when a dialog is
- * really shown; it records the prompt for this session, and `tool.check`
- * speaks once it sees that record.
+ * `PermissionRequest` hook in `hooks/hooks.json` records each ask that reaches
+ * the engine, along with its mode and tool; `tool.check` speaks only for the
+ * records `promptShows` accepts, those a person really answers.
  *
  * Playback is a one-shot `$.process.run` per utterance, chained so that a
  * permission prompt never talks over the sentence before it. A mod has no
@@ -31,6 +31,7 @@ import {
   validate,
   type PermissionAsk,
 } from "../src/core/message";
+import { parsePromptRecord, promptShows } from "../src/core/prompt";
 
 /** Must match `name` in `.claude-plugin/plugin.json`: Claude calls `mcp__<plugin>__announce`. */
 const PLUGIN = "voice-over";
@@ -38,7 +39,7 @@ const TOOL = "announce";
 const FULL_TOOL = `mcp__${PLUGIN}__${TOOL}`;
 const TIMEOUT_MS = 120_000;
 
-/** `hooks/permission.sh` records a real prompt at `<tmpdir>/<PREFIX>-<session id>`. */
+/** `hooks/permission.sh` records each ask at `<tmpdir>/<PREFIX>-<session id>`. */
 const PROMPT_FILE = "voice-over-permission";
 
 /**
@@ -55,6 +56,9 @@ const ASK_WINDOW_MS = 150;
 
 /** Where this session's permission prompts are recorded; absent when unknown. */
 let promptSignal: string | undefined;
+
+/** True under the REPL, false for a headless run, which has no dialog to show. */
+let interactive = false;
 
 const INPUT = {
   type: "object",
@@ -130,7 +134,7 @@ function queueAsk($: EngineInterface, ask: PermissionAsk, config: Config, enable
 }
 
 /**
- * Speaks once the classic hook records a prompt that is really on screen.
+ * Speaks once the classic hook records a prompt a person really answers.
  * `$.clock.after` returns at once, so the dialog is never held back.
  */
 function watchForPrompt(
@@ -150,9 +154,10 @@ function watchForPrompt(
       } catch {
         return;
       }
-      if (signal.trim() === "") return;
+      const record = parsePromptRecord(signal);
+      if (record === undefined || !promptShows(record)) return;
       spoken = true;
-      debug($, enabled, "permission prompt", ask.action);
+      debug($, enabled, "permission prompt", ask.action, record.mode);
       queueAsk($, ask, config, enabled);
     });
   }
@@ -170,6 +175,7 @@ export const register: Register = (on, options) => {
   on("session.start", async ($, event, next) => {
     // A session that starts between an ask and its window leaves nothing behind.
     asks = [];
+    interactive = event.isInteractive;
     await $.tool.register({
       name: TOOL,
       // The description is where Claude reads when to announce: a built-in guard
@@ -239,7 +245,8 @@ export const register: Register = (on, options) => {
     const call = event as unknown as { tool: string; agentId?: string; tool_use_id?: string };
     // A query (no tool call) is not a prompt, and our own tool is not worth a sentence.
     if (decided.decision !== "ask" || call.tool_use_id === undefined) return decided;
-    if (call.agentId !== undefined || call.tool === FULL_TOOL || promptSignal === undefined) {
+    if (!interactive || promptSignal === undefined) return decided;
+    if (call.agentId !== undefined || call.tool === FULL_TOOL) {
       return decided;
     }
 

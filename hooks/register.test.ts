@@ -11,6 +11,11 @@ const TOOL = "mcp__voice-over__announce";
 /** Where the mod and `hooks/permission.sh` meet for the test's session. */
 const PROMPT_SIGNAL = "/tmp/voice-over-permission-session-1";
 
+/** What the hook records: the mode, the tool, and the asking agent's id. */
+function record(mode = "default", tool = "Bash", agent = ""): string {
+  return `${mode}\t${tool}\t${agent}\n`;
+}
+
 type Run = { argv: readonly string[]; init?: { stdin?: string; timeoutMs?: number } };
 
 /** Stubs Claude Code's answers, and records what the mod registers and runs. */
@@ -123,8 +128,8 @@ test("speaks a permission prompt once the dialog is really shown", async ($, on)
   await settle();
   expect(runs).toEqual([]);
 
-  // The classic `PermissionRequest` hook records the prompt the engine shows.
-  files.set(PROMPT_SIGNAL, "prompt");
+  // The classic `PermissionRequest` hook records the ask the engine builds.
+  files.set(PROMPT_SIGNAL, record());
   await clock.advance(200);
   await settle();
   // Asks are collected for a moment before they are spoken.
@@ -144,7 +149,7 @@ test("speaks parallel permission prompts as one sentence", async ($, on) => {
   await $.tool.check({ tool: "Bash", input: { command: "python plot.py" }, tool_use_id: "toolu_1" });
   await $.tool.check({ tool: "Bash", input: { command: "grep -r foo ." }, tool_use_id: "toolu_2" });
 
-  files.set(PROMPT_SIGNAL, "prompt");
+  files.set(PROMPT_SIGNAL, record());
   await clock.advance(200);
   await settle();
   await clock.advance(150);
@@ -160,9 +165,51 @@ test("stays silent when the permission mode answers the ask itself", async ($, o
   on("tool.check", () => ({ decision: "ask" }));
 
   await $.session.start({ surface: "terminal", isInteractive: true, cwd: "/work" });
-  // Auto mode resolves the ask without a dialog, so no record appears.
+  // Auto mode's classifier, and `dontAsk`'s denial, leave no dialog to speak for.
+  for (const mode of ["auto", "dontAsk", "bypassPermissions"]) {
+    await $.tool.check({ tool: "Bash", input: { command: "ls" }, tool_use_id: "toolu_1" });
+    files.set(PROMPT_SIGNAL, record(mode));
+    await clock.advance(2000);
+    await settle();
+  }
+
+  expect(runs).toEqual([]);
+});
+
+test("stays silent when the ask is a question", async ($, on) => {
+  const { runs, files, clock } = harness(on);
+  on("tool.check", () => ({ decision: "ask" }));
+
+  await $.session.start({ surface: "terminal", isInteractive: true, cwd: "/work" });
+  await $.tool.check({ tool: "AskUserQuestion", input: {}, tool_use_id: "toolu_1" });
+  // The question dialog is the ask; no permission prompt is drawn for the tool.
+  files.set(PROMPT_SIGNAL, record("default", "AskUserQuestion"));
+  await clock.advance(2000);
+  await settle();
+
+  expect(runs).toEqual([]);
+});
+
+test("stays silent when a subagent asks", async ($, on) => {
+  const { runs, files, clock } = harness(on);
+  on("tool.check", () => ({ decision: "ask" }));
+
+  await $.session.start({ surface: "terminal", isInteractive: true, cwd: "/work" });
   await $.tool.check({ tool: "Bash", input: { command: "ls" }, tool_use_id: "toolu_1" });
-  expect(files.get(PROMPT_SIGNAL)).toBe("");
+  files.set(PROMPT_SIGNAL, record("default", "Bash", "agent-1"));
+  await clock.advance(2000);
+  await settle();
+
+  expect(runs).toEqual([]);
+});
+
+test("stays silent in a headless run, which shows no dialog", async ($, on) => {
+  const { runs, files, clock } = harness(on);
+  on("tool.check", () => ({ decision: "ask" }));
+
+  await $.session.start({ surface: null, isInteractive: false, cwd: "/work" });
+  await $.tool.check({ tool: "Bash", input: { command: "ls" }, tool_use_id: "toolu_1" });
+  files.set(PROMPT_SIGNAL, record());
   await clock.advance(2000);
   await settle();
 
@@ -176,7 +223,7 @@ test("stays silent when a tool check is not a prompt", async ($, on) => {
   await $.session.start({ surface: "terminal", isInteractive: true, cwd: "/work" });
   await $.tool.check({ tool: "Bash", input: { command: "ls" }, tool_use_id: "toolu_1" });
   await $.tool.check({ tool: "Bash", input: { command: "ls" } });
-  files.set(PROMPT_SIGNAL, "prompt");
+  files.set(PROMPT_SIGNAL, record());
   await clock.advance(2000);
   await settle();
 
