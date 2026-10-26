@@ -4,6 +4,7 @@ import { Plugin } from "@opencode/plugin";
 
 import { resolveConfig } from "./core/config.js";
 import { instructions, toolDescription } from "./core/instructions.js";
+import { sameDirectory } from "./core/location.js";
 import {
   cleanAbout,
   compose,
@@ -52,7 +53,7 @@ export default Plugin.define({
   id: "voice-over",
   async setup(ctx) {
     const config = resolveConfig(ctx.options);
-    debug("setup", JSON.stringify(config));
+    debug("setup", ctx.location.directory, JSON.stringify(config));
     if (!config.enabled) return;
 
     const player = new Player(config);
@@ -60,6 +61,27 @@ export default Plugin.define({
     const pending = new Map<string, string>();
     /** Child sessions (subagents) never announce; the user did not start them. */
     const primary = new Map<string, boolean>();
+
+    /**
+     * The server hosts every open project and sets the plugin up once per
+     * location, so this instance reads the events of all of them. Speak only
+     * for the session's own location, or every open project talks at once.
+     */
+    const here = ctx.location.directory;
+
+    const isHere = async (
+      sessionID: string,
+      location: { readonly directory: string } | undefined,
+    ): Promise<boolean> => {
+      if (location !== undefined) return sameDirectory(location.directory, here);
+      // The event may not carry a location; ask for the session instead.
+      try {
+        return sameDirectory((await ctx.session.get({ sessionID })).location.directory, here);
+      } catch (error) {
+        debug("session lookup failed", sessionID, error);
+        return false;
+      }
+    };
 
     const isPrimary = async (sessionID: string): Promise<boolean> => {
       const known = primary.get(sessionID);
@@ -158,6 +180,7 @@ export default Plugin.define({
           case "session.execution.started":
           case "session.execution.failed":
           case "session.execution.interrupted":
+            if (!(await isHere(event.data.sessionID, event.location))) break;
             debug("event", event.type, event.data.sessionID);
             pending.delete(event.data.sessionID);
             break;
@@ -165,6 +188,7 @@ export default Plugin.define({
           case "session.execution.succeeded":
           case "session.idle": {
             const { sessionID } = event.data;
+            if (!(await isHere(sessionID, event.location))) break;
             debug("event", event.type, sessionID, pending.has(sessionID) ? "pending" : "nothing pending");
             onTurnEnd(sessionID);
             break;
@@ -174,6 +198,10 @@ export default Plugin.define({
             // The turn is suspended until the user answers, so the model cannot
             // announce it at the end of its turn: speak it as soon as it appears.
             const { sessionID, action, resources } = event.data;
+            if (!(await isHere(sessionID, event.location))) {
+              debug("event", event.type, sessionID, "another location, staying quiet");
+              break;
+            }
             if (!(await isPrimary(sessionID))) {
               debug("event", event.type, sessionID, "child session, staying quiet");
               break;

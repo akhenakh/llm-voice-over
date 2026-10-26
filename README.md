@@ -50,6 +50,11 @@ Other TTS commands work too; see [Options](#options).
 6. Child sessions (subagents) never announce: the tool is removed from their requests in OpenCode
    and refused in Claude Code, and their completions and permission prompts are ignored.
 
+OpenCode 2 runs plugins in a background service shared by every open editor on the machine and sets
+the plugin up once per open project. Each copy reads the same event stream, so the plugin speaks
+only for the project that owns the session: a prompt in one tab is read out once, not once per open
+tab.
+
 The model announces only when the user has a reason to come back: the task is done, it is blocked
 on an answer, or a long task started earlier has finished. It skips ordinary chat turns,
 milestones, mid-work questions, and turns that end while a long task is still running. Permission
