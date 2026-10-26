@@ -3,8 +3,14 @@
  *
  * The mod runs inside Claude Code's process, so the queue lives in this file:
  * the `announce` tool stores the phrase, `turn.complete` speaks it, and a turn
- * that was interrupted or failed drops it. Permission prompts are spoken from
- * `tool.check`, because the turn stays suspended until the user answers.
+ * that was interrupted or failed drops it.
+ *
+ * Permission prompts are the awkward case. `tool.check` resolves to `ask`
+ * before the permission mode decides what to do with that ask, so auto mode
+ * (and `dontAsk`) answer it without ever showing a dialog. The classic
+ * `PermissionRequest` hook in `hooks/hooks.json` runs only when a dialog is
+ * really shown; it records the prompt for this session, and `tool.check`
+ * speaks once it sees that record.
  *
  * Playback is a one-shot `$.process.run` per utterance, chained so that a
  * permission prompt never talks over the sentence before it. A mod has no
@@ -24,6 +30,18 @@ const PLUGIN = "voice-over";
 const TOOL = "announce";
 const FULL_TOOL = `mcp__${PLUGIN}__${TOOL}`;
 const TIMEOUT_MS = 120_000;
+
+/** `hooks/permission.sh` records a real prompt at `<tmpdir>/<PREFIX>-<session id>`. */
+const PROMPT_FILE = "voice-over-permission";
+
+/**
+ * How long after an ask to look for that record. The hook runs right behind
+ * `tool.check`, but a cold shell can take a moment; the dialog stays up.
+ */
+const PROMPT_CHECKS_MS = [200, 400, 800, 1600];
+
+/** Where this session's permission prompts are recorded; absent when unknown. */
+let promptSignal: string | undefined;
 
 const INPUT = {
   type: "object",
@@ -76,6 +94,36 @@ function play($: EngineInterface, config: Config, enabled: boolean, text: string
   });
 }
 
+/**
+ * Speaks once the classic hook records a prompt that is really on screen.
+ * `$.clock.after` returns at once, so the dialog is never held back.
+ */
+function watchForPrompt(
+  $: EngineInterface,
+  path: string,
+  tool: string,
+  config: Config,
+  enabled: boolean,
+): void {
+  let spoken = false;
+  for (const delay of PROMPT_CHECKS_MS) {
+    $.clock.after(delay, async () => {
+      if (spoken) return;
+      let signal: string;
+      try {
+        signal = await $.fs.read(path);
+      } catch {
+        return;
+      }
+      if (signal.trim() === "") return;
+      spoken = true;
+      const text = compose(config.name, "permission", permissionAbout(tool));
+      debug($, enabled, "permission prompt", tool, text);
+      play($, config, enabled, text);
+    });
+  }
+}
+
 export const register: Register = (on, options) => {
   const config = resolveConfig(options as Readonly<Record<string, unknown>>, "claude");
   if (!config.enabled) return;
@@ -94,6 +142,12 @@ export const register: Register = (on, options) => {
       inputSchema: INPUT,
       isDeferred: false,
     } as ToolSpecWithDeferral);
+    try {
+      const tmp = ((await $.env.get("TMPDIR")) ?? "/tmp").replace(/\/+$/, "");
+      promptSignal = `${tmp}/${PROMPT_FILE}-${await $.session.id()}`;
+    } catch {
+      promptSignal = undefined;
+    }
     debug($, debugEnabled, "ready", JSON.stringify(config));
     return next(event);
   });
@@ -149,11 +203,18 @@ export const register: Register = (on, options) => {
     const call = event as unknown as { tool: string; agentId?: string; tool_use_id?: string };
     // A query (no tool call) is not a prompt, and our own tool is not worth a sentence.
     if (decided.decision !== "ask" || call.tool_use_id === undefined) return decided;
-    if (call.agentId !== undefined || call.tool === FULL_TOOL) return decided;
+    if (call.agentId !== undefined || call.tool === FULL_TOOL || promptSignal === undefined) {
+      return decided;
+    }
 
-    const text = compose(config.name, "permission", permissionAbout(call.tool));
-    debug($, debugEnabled, "permission prompt", call.tool, text);
-    play($, config, debugEnabled, text);
+    const path = promptSignal;
+    try {
+      // Clear the last record, so only a prompt for this call can speak.
+      await $.fs.write(path, "");
+    } catch {
+      return decided;
+    }
+    watchForPrompt($, path, call.tool, config, debugEnabled);
     return decided;
   }).catch((_$, event, next) => next(event));
 };

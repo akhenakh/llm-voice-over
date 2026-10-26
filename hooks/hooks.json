@@ -1,4 +1,16 @@
 {
   "description": "Spoken turn-end notifications",
-  "modules": ["./register.ts"]
+  "modules": ["./register.ts"],
+  "hooks": {
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PLUGIN_ROOT\"/hooks/permission.sh"
+          }
+        ]
+      }
+    ]
+  }
 }

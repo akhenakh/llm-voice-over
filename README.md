@@ -41,7 +41,10 @@ Other TTS commands work too; see [Options](#options).
 5. Permission prompts are spoken the moment they appear, because the turn stays suspended until
    the user answers and the model cannot announce it. The plugin phrases the request from the tool
    name (`needs permission to run a command`, `needs permission to edit files`) instead of reading
-   paths or commands out loud.
+   paths or commands out loud. In Claude Code an ask is not a prompt by itself: auto mode and
+   `dontAsk` answer it without showing a dialog, so a small `PermissionRequest` hook
+   (`hooks/permission.sh`) records the prompts that are really on screen and the mod speaks only
+   for those.
 6. Child sessions (subagents) never announce: the tool is removed from their requests in OpenCode
    and refused in Claude Code, and their completions and permission prompts are ignored.
 
@@ -168,7 +171,8 @@ not interchangeable: a mod test imports `claude-code/testing`, which only resolv
 Code.
 
 The Claude Code plugin is a mod: `.claude-plugin/` holds the plugin and marketplace manifests,
-`hooks/register.ts` the module, and `.claude/types/claude-code.d.ts` the vendored declarations of
-the mods API (written by Claude Code 2.1.277; regenerate with `/plugin-types` on newer builds).
+`hooks/register.ts` the module, `hooks/permission.sh` the classic hook that records real permission
+dialogs, and `.claude/types/claude-code.d.ts` the vendored declarations of the mods API (written by
+Claude Code 2.1.277; regenerate with `/plugin-types` on newer builds).
 `src/core/` is shared by both targets, `src/index.ts` is the OpenCode plugin, and
 `src/player.ts` its player.

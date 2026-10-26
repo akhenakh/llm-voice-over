@@ -1,7 +1,7 @@
 {
   "name": "voice-over",
   "displayName": "Voice Over",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Spoken turn-end notifications for Claude Code, streamed through pdg.",
   "license": "MIT",
   "author": {
