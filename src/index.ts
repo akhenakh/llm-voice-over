@@ -4,10 +4,23 @@ import { Plugin } from "@opencode/plugin";
 
 import { resolveConfig } from "./core/config.js";
 import { instructions, toolDescription } from "./core/instructions.js";
-import { cleanAbout, compose, isKind, permissionAbout, validate } from "./core/message.js";
+import {
+  cleanAbout,
+  compose,
+  isKind,
+  permissionPhrases,
+  validate,
+  type PermissionAsk,
+} from "./core/message.js";
 import { Player } from "./player.js";
 
 const TOOL = "announce";
+
+/**
+ * Parallel tool calls ask for permission one by one, within milliseconds of
+ * each other. Let the burst settle so they are spoken as one sentence.
+ */
+const PERMISSION_WINDOW_MS = 150;
 
 /** Set VOICE_OVER_DEBUG=/path/to/file to trace the queue and playback boundary. */
 const debugFile = process.env.VOICE_OVER_DEBUG;
@@ -70,6 +83,31 @@ export default Plugin.define({
       pending.delete(sessionID);
       debug("speaking", text);
       player.speak(text);
+    };
+
+    /** Asks waiting for their burst to settle, keyed by session. */
+    const asks = new Map<string, PermissionAsk[]>();
+    const askTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+    const speakAsks = (sessionID: string) => {
+      askTimers.delete(sessionID);
+      const burst = asks.get(sessionID);
+      asks.delete(sessionID);
+      if (burst === undefined || burst.length === 0) return;
+      const text = compose(config.name, "permission", permissionPhrases(burst));
+      debug("event", "permission burst", sessionID, burst.length, "speaking", text);
+      player.speak(text);
+    };
+
+    const queueAsk = (sessionID: string, ask: PermissionAsk) => {
+      const burst = asks.get(sessionID) ?? [];
+      burst.push(ask);
+      asks.set(sessionID, burst);
+      if (askTimers.has(sessionID)) return;
+      const timer = setTimeout(() => speakAsks(sessionID), PERMISSION_WINDOW_MS);
+      // The announcement must not hold the process open.
+      timer.unref?.();
+      askTimers.set(sessionID, timer);
     };
 
     await ctx.tool.transform((editor) => {
@@ -135,14 +173,13 @@ export default Plugin.define({
           case "permission.asked": {
             // The turn is suspended until the user answers, so the model cannot
             // announce it at the end of its turn: speak it as soon as it appears.
-            const { sessionID, action } = event.data;
+            const { sessionID, action, resources } = event.data;
             if (!(await isPrimary(sessionID))) {
               debug("event", event.type, sessionID, "child session, staying quiet");
               break;
             }
-            const text = compose(config.name, "permission", permissionAbout(action));
-            debug("event", event.type, sessionID, "speaking", text);
-            player.speak(text);
+            debug("event", event.type, sessionID, action, resources?.length ?? 0);
+            queueAsk(sessionID, { action, resources });
             break;
           }
         }
@@ -153,6 +190,9 @@ export default Plugin.define({
 
     return () => {
       abort.abort();
+      for (const timer of askTimers.values()) clearTimeout(timer);
+      askTimers.clear();
+      asks.clear();
       player.stop();
     };
   },

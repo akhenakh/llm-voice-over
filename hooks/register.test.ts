@@ -127,9 +127,31 @@ test("speaks a permission prompt once the dialog is really shown", async ($, on)
   files.set(PROMPT_SIGNAL, "prompt");
   await clock.advance(200);
   await settle();
+  // Asks are collected for a moment before they are spoken.
+  await clock.advance(150);
+  await settle();
 
   expect(runs).toEqual([
-    { argv: ["pdg", "claude: needs permission to run a command"], init: { timeoutMs: 120_000 } },
+    { argv: ["pdg", "claude: needs permission to run ls"], init: { timeoutMs: 120_000 } },
+  ]);
+});
+
+test("speaks parallel permission prompts as one sentence", async ($, on) => {
+  const { runs, files, clock } = harness(on);
+  on("tool.check", () => ({ decision: "ask" }));
+
+  await $.session.start({ surface: "terminal", isInteractive: true, cwd: "/work" });
+  await $.tool.check({ tool: "Bash", input: { command: "python plot.py" }, tool_use_id: "toolu_1" });
+  await $.tool.check({ tool: "Bash", input: { command: "grep -r foo ." }, tool_use_id: "toolu_2" });
+
+  files.set(PROMPT_SIGNAL, "prompt");
+  await clock.advance(200);
+  await settle();
+  await clock.advance(150);
+  await settle();
+
+  expect(runs).toEqual([
+    { argv: ["pdg", "claude: needs permission to run grep and python"], init: { timeoutMs: 120_000 } },
   ]);
 });
 

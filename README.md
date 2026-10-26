@@ -10,7 +10,7 @@ whole answer out loud.
 ```
 opencode: finished work on the login redirect fix
 claude: question about which database to target
-claude: needs permission to run a command
+claude: needs permission to run grep and python
 ```
 
 ## Recommended TTS: pdg
@@ -39,10 +39,12 @@ Other TTS commands work too; see [Options](#options).
 4. When the turn ends normally, the queued sentence is spoken. If the turn is interrupted, fails,
    or is refused, the queue is dropped.
 5. Permission prompts are spoken the moment they appear, because the turn stays suspended until
-   the user answers and the model cannot announce it. The plugin phrases the request from the tool
-   name (`needs permission to run a command`, `needs permission to edit files`) instead of reading
-   paths or commands out loud. In Claude Code an ask is not a prompt by itself: auto mode and
-   `dontAsk` answer it without showing a dialog, so a small `PermissionRequest` hook
+   the user answers and the model cannot announce it. A shell prompt names the programs it needs
+   (`needs permission to run grep and python`), sorted and deduplicated across the pipelines and
+   chains of the command; other prompts use the tool name (`needs permission to edit files`) rather
+   than reading paths out loud. Calls that ask in the same burst, as parallel tool calls do, are
+   collected briefly and spoken as one sentence. In Claude Code an ask is not a prompt by itself:
+   auto mode and `dontAsk` answer it without showing a dialog, so a small `PermissionRequest` hook
    (`hooks/permission.sh`) records the prompts that are really on screen and the mod speaks only
    for those.
 6. Child sessions (subagents) never announce: the tool is removed from their requests in OpenCode

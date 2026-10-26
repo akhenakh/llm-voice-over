@@ -23,7 +23,14 @@ import type { EngineInterface, Register } from "claude-code";
 import type { Config } from "../src/core/config";
 import { resolveConfig } from "../src/core/config";
 import { instructions } from "../src/core/instructions";
-import { cleanAbout, compose, isKind, permissionAbout, validate } from "../src/core/message";
+import {
+  cleanAbout,
+  compose,
+  isKind,
+  permissionPhrases,
+  validate,
+  type PermissionAsk,
+} from "../src/core/message";
 
 /** Must match `name` in `.claude-plugin/plugin.json`: Claude calls `mcp__<plugin>__announce`. */
 const PLUGIN = "voice-over";
@@ -39,6 +46,12 @@ const PROMPT_FILE = "voice-over-permission";
  * `tool.check`, but a cold shell can take a moment; the dialog stays up.
  */
 const PROMPT_CHECKS_MS = [200, 400, 800, 1600];
+
+/**
+ * Parallel calls each ask separately and each watcher sees the same recorded
+ * prompt; collect them for a moment so they are spoken as one sentence.
+ */
+const ASK_WINDOW_MS = 150;
 
 /** Where this session's permission prompts are recorded; absent when unknown. */
 let promptSignal: string | undefined;
@@ -94,6 +107,28 @@ function play($: EngineInterface, config: Config, enabled: boolean, text: string
   });
 }
 
+/** Asks whose dialog is on screen, waiting for their burst to settle. */
+let asks: PermissionAsk[] = [];
+
+function speakAsks($: EngineInterface, config: Config, enabled: boolean): void {
+  const burst = asks;
+  asks = [];
+  if (burst.length === 0) return;
+  const text = compose(config.name, "permission", permissionPhrases(burst));
+  debug($, enabled, "permission prompts", burst.length, text);
+  play($, config, enabled, text);
+}
+
+/** Waits one window after the first ask of a burst, then speaks them together. */
+function queueAsk($: EngineInterface, ask: PermissionAsk, config: Config, enabled: boolean): void {
+  const first = asks.length === 0;
+  asks.push(ask);
+  if (!first) return;
+  $.clock.after(ASK_WINDOW_MS, () => {
+    speakAsks($, config, enabled);
+  });
+}
+
 /**
  * Speaks once the classic hook records a prompt that is really on screen.
  * `$.clock.after` returns at once, so the dialog is never held back.
@@ -101,7 +136,7 @@ function play($: EngineInterface, config: Config, enabled: boolean, text: string
 function watchForPrompt(
   $: EngineInterface,
   path: string,
-  tool: string,
+  ask: PermissionAsk,
   config: Config,
   enabled: boolean,
 ): void {
@@ -117,9 +152,8 @@ function watchForPrompt(
       }
       if (signal.trim() === "") return;
       spoken = true;
-      const text = compose(config.name, "permission", permissionAbout(tool));
-      debug($, enabled, "permission prompt", tool, text);
-      play($, config, enabled, text);
+      debug($, enabled, "permission prompt", ask.action);
+      queueAsk($, ask, config, enabled);
     });
   }
 }
@@ -134,6 +168,8 @@ export const register: Register = (on, options) => {
   let pending: string | undefined;
 
   on("session.start", async ($, event, next) => {
+    // A session that starts between an ask and its window leaves nothing behind.
+    asks = [];
     await $.tool.register({
       name: TOOL,
       // The description is where Claude reads when to announce: a built-in guard
@@ -214,7 +250,13 @@ export const register: Register = (on, options) => {
     } catch {
       return decided;
     }
-    watchForPrompt($, path, call.tool, config, debugEnabled);
+    watchForPrompt($, path, { action: call.tool, resources: commandResources(event.input) }, config, debugEnabled);
     return decided;
   }).catch((_$, event, next) => next(event));
 };
+
+/** Bash reaches `tool.check` with the command it would run; name it out loud. */
+function commandResources(input: unknown): string[] {
+  const command = (input as { command?: unknown } | undefined)?.command;
+  return typeof command === "string" ? [command] : [];
+}
