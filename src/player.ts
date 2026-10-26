@@ -8,7 +8,7 @@
 
 import { spawn, type ChildProcess } from "node:child_process";
 
-import type { Config } from "./config.js";
+import type { Config } from "./core/config.js";
 
 export class Player {
   private child: ChildProcess | undefined;

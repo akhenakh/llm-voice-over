@@ -1,9 +1,10 @@
 import type { Config } from "./config.js";
 
 /**
- * Injected into the system prompt for primary sessions only. This is where the
- * model learns *when* a turn is worth announcing and *how* to keep the text
- * short enough to start streaming quickly.
+ * The policy that tells the model when a turn is worth announcing and how to
+ * keep the text short enough to start streaming quickly. OpenCode injects it
+ * into the system prompt of primary sessions; Claude Code ships it as the
+ * `announce` tool's description.
  */
 export function instructions(config: Config): string {
   return `## Spoken turn announcements

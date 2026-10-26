@@ -1,0 +1,59 @@
+{
+  "name": "voice-over",
+  "displayName": "Voice Over",
+  "version": "0.2.0",
+  "description": "Spoken turn-end notifications for Claude Code, streamed through pdg.",
+  "author": {
+    "name": "Fabrice Aneche"
+  },
+  "homepage": "https://github.com/akhenakh/llm-voice-over",
+  "repository": "https://github.com/akhenakh/llm-voice-over",
+  "keywords": ["tts", "notifications", "pdg"],
+  "userConfig": {
+    "name": {
+      "type": "string",
+      "title": "Spoken prefix",
+      "description": "Prefix spoken before every announcement. Set to an empty value to omit it.",
+      "default": "claude"
+    },
+    "command": {
+      "type": "string",
+      "title": "TTS command",
+      "description": "Command and fixed arguments. The announcement is appended as the last argument, or piped when input is stdin.",
+      "default": "pdg"
+    },
+    "input": {
+      "type": "string",
+      "title": "How the announcement reaches the command",
+      "description": "arg appends it as the last argument; stdin pipes it.",
+      "options": ["arg", "stdin"],
+      "default": "arg"
+    },
+    "maxWords": {
+      "type": "number",
+      "title": "Maximum words",
+      "description": "Maximum words in the whole announcement.",
+      "default": 20,
+      "min": 1
+    },
+    "maxFirstSentenceWords": {
+      "type": "number",
+      "title": "Maximum words in the first sentence",
+      "description": "pdg starts streaming audio after the first sentence, so it must stay short.",
+      "default": 9,
+      "min": 1
+    },
+    "enabled": {
+      "type": "boolean",
+      "title": "Enabled",
+      "description": "Load the plugin without announcing when turned off.",
+      "default": true
+    },
+    "debug": {
+      "type": "boolean",
+      "title": "Debug",
+      "description": "Write a dim line to the transcript for each queued, dropped, and spoken announcement.",
+      "default": false
+    }
+  }
+}

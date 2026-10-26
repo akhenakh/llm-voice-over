@@ -1,0 +1,16 @@
+{
+  "name": "llm-voice-over",
+  "owner": {
+    "name": "Fabrice Aneche"
+  },
+  "description": "Spoken turn-end notifications for coding agents",
+  "plugins": [
+    {
+      "name": "voice-over",
+      "source": ".",
+      "description": "Spoken turn-end notifications for Claude Code, streamed through pdg.",
+      "category": "productivity",
+      "tags": ["tts", "notifications", "pdg"]
+    }
+  ]
+}

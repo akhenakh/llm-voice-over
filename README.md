@@ -1,6 +1,7 @@
-# opencode-voice-over
+# llm-voice-over
 
-Spoken turn-end notifications for [OpenCode](https://opencode.ai) 2.
+Spoken turn-end notifications for [OpenCode](https://opencode.ai) and
+[Claude Code](https://claude.com/claude-code).
 
 The plugin announces only turns worth coming back for, keeps the spoken text short enough for
 `pdg` to start streaming quickly, and lets the model phrase the subject instead of reading its
@@ -8,8 +9,8 @@ whole answer out loud.
 
 ```
 opencode: finished work on the login redirect fix
-opencode: question about which database to target
-opencode: needs permission to run a command
+claude: question about which database to target
+claude: needs permission to run a command
 ```
 
 ## Recommended TTS: pdg
@@ -27,27 +28,35 @@ Other TTS commands work too; see [Options](#options).
 
 ## How it works
 
-1. The plugin registers an `announce` tool and injects a short policy into the system prompt of
-   primary sessions. The policy says when a turn qualifies and how to phrase it.
+1. The plugin registers an `announce` tool and tells the model when a turn qualifies and how to
+   phrase it. OpenCode gets a short policy section in the system prompt of primary sessions;
+   Claude Code gets the same policy as the tool's description, because Claude's built-in guard
+   skips prompt sections added by mods the user installed.
 2. The model calls `announce` once, as the last action of a qualifying turn, with a `kind`
    (`finished` or `question`) and a short `about` phrase.
 3. The plugin validates the phrase (plain words, no paths or identifiers, short first sentence),
    composes the fixed sentence, and queues it.
-4. When the turn ends (`session.execution.succeeded`), the queued sentence is spoken. If the turn
-   fails or is interrupted, the queue is dropped.
-5. Permission prompts (`permission.asked`) are spoken the moment they appear, because the turn stays
-   suspended until the user answers and the model cannot announce it. The plugin phrases the request
-   from the permission action (`needs permission to run a command`, `needs permission to edit files`)
-   instead of reading paths or commands out loud.
-6. Child sessions (subagents) never announce: the tool is removed from their requests and their
-   completions and permission prompts are ignored.
+4. When the turn ends normally, the queued sentence is spoken. If the turn is interrupted, fails,
+   or is refused, the queue is dropped.
+5. Permission prompts are spoken the moment they appear, because the turn stays suspended until
+   the user answers and the model cannot announce it. The plugin phrases the request from the tool
+   name (`needs permission to run a command`, `needs permission to edit files`) instead of reading
+   paths or commands out loud.
+6. Child sessions (subagents) never announce: the tool is removed from their requests in OpenCode
+   and refused in Claude Code, and their completions and permission prompts are ignored.
 
 The model announces only when the user has a reason to come back: the task is done, it is blocked
 on an answer, or a long task started earlier has finished. It skips ordinary chat turns,
 milestones, mid-work questions, and turns that end while a long task is still running. Permission
 prompts do not wait for the model: they interrupt the turn, so the plugin speaks them immediately.
 
+One playback difference: OpenCode spawns a detached TTS process and kills the previous utterance
+when a new one arrives, so a permission prompt never waits. A Claude Code mod has no handle on a
+running child, so utterances are chained: a new announcement waits for the current one to finish.
+
 ## Install
+
+### OpenCode
 
 ```sh
 opencode plugin add git+https://github.com/akhenakh/llm-voice-over.git
@@ -86,16 +95,36 @@ A real directory with an `index.ts` works too. Re-exported plugins cannot receiv
 file, or run `opencode plugin remove git+https://github.com/akhenakh/llm-voice-over.git`, or set
 `"enabled": false`, to turn announcements off.
 
+### Claude Code
+
+Add this repository as a marketplace, then install the plugin:
+
+```
+/plugin marketplace add akhenakh/llm-voice-over
+/plugin install voice-over --marketplace akhenakh/llm-voice-over
+```
+
+To set options, run `claude plugin configure voice-over`, or edit the plugin's configuration in
+`/plugin`. For local development, load the checkout directly:
+
+```sh
+claude --plugin-dir /path/to/llm-voice-over
+```
+
+Claude Code 2.1.293 or later is required (mods). Set `enabled` to false, or
+`/plugin uninstall voice-over`, to turn announcements off.
+
 ## Options
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `name` | `"opencode"` | Spoken prefix. Set to `""` to omit it. |
-| `command` | `["pdg"]` | Command and fixed arguments. A string is split on whitespace. |
-| `input` | `"arg"` | `"arg"` appends the sentence as the last argument; `"stdin"` pipes it. |
-| `maxWords` | `20` | Maximum words in the whole announcement. |
-| `maxFirstSentenceWords` | `9` | Maximum words in the first sentence. `pdg` starts streaming after it. |
-| `enabled` | `true` | Load the plugin without announcing. |
+| Option | Default | OpenCode | Claude Code | Description |
+| --- | --- | --- | --- | --- |
+| `name` | `"opencode"` / `"claude"` | array or string | string | Spoken prefix. Set to `""` to omit it. |
+| `command` | `["pdg"]` / `"pdg"` | array or string | string | Command and fixed arguments. A string is split on whitespace. |
+| `input` | `"arg"` | ✓ | ✓ | `"arg"` appends the sentence as the last argument; `"stdin"` pipes it. |
+| `maxWords` | `20` | ✓ | ✓ | Maximum words in the whole announcement. |
+| `maxFirstSentenceWords` | `9` | ✓ | ✓ | Maximum words in the first sentence. `pdg` starts streaming after it. |
+| `enabled` | `true` | ✓ | ✓ | Load the plugin without announcing. |
+| `debug` | `false` | — | ✓ | Write a dim transcript line for each queued, dropped, and spoken announcement. |
 
 Other commands work too, though [`pdg`](https://github.com/akhenakh/pdg) is recommended:
 
@@ -112,12 +141,14 @@ still being synthesized. Keep the first sentence short.
 
 ## Debugging
 
-Set `VOICE_OVER_DEBUG` to a file path to trace setup, tool calls, validation, turn-end detection,
-and playback:
+In OpenCode, set `VOICE_OVER_DEBUG` to a file path to trace setup, tool calls, validation,
+turn-end detection, and playback:
 
 ```sh
 VOICE_OVER_DEBUG=/tmp/voice-over.log opencode
 ```
+
+In Claude Code, set the `debug` option instead; it logs the same events with `$.ui.log`.
 
 ## Development
 
@@ -125,7 +156,19 @@ VOICE_OVER_DEBUG=/tmp/voice-over.log opencode
 bun install
 bun test
 bun run typecheck
+bun run typecheck:claude
+claude plugin validate .
+claude plugin test .
 ```
 
-The tests cover the wording/templates and the player, including a real `pdg` synthesis when the
-binary is on `PATH`.
+`bun test` covers the shared wording/templates and the OpenCode player, including a real `pdg`
+synthesis when the binary is on `PATH`. Those tests are named `*.spec.ts` because
+`claude plugin test` runs every `*.test.ts` under the repository, and the two test environments are
+not interchangeable: a mod test imports `claude-code/testing`, which only resolves inside Claude
+Code.
+
+The Claude Code plugin is a mod: `.claude-plugin/` holds the plugin and marketplace manifests,
+`hooks/register.ts` the module, and `.claude/types/claude-code.d.ts` the vendored declarations of
+the mods API (written by Claude Code 2.1.277; regenerate with `/plugin-types` on newer builds).
+`src/core/` is shared by both targets, `src/index.ts` is the OpenCode plugin, and
+`src/player.ts` its player.

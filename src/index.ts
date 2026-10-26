@@ -2,9 +2,9 @@ import { appendFileSync } from "node:fs";
 
 import { Plugin } from "@opencode/plugin";
 
-import { resolveConfig } from "./config.js";
-import { instructions, toolDescription } from "./instructions.js";
-import { cleanAbout, compose, isKind, permissionAbout, validate } from "./message.js";
+import { resolveConfig } from "./core/config.js";
+import { instructions, toolDescription } from "./core/instructions.js";
+import { cleanAbout, compose, isKind, permissionAbout, validate } from "./core/message.js";
 import { Player } from "./player.js";
 
 const TOOL = "announce";

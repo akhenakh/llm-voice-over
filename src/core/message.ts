@@ -19,6 +19,7 @@ const TEMPLATE: Record<SpokenKind, string> = {
 
 /** Permission actions, as plain verb phrases that read well out loud. */
 const ACTION: Record<string, string> = {
+  // OpenCode action names.
   shell: "run a command",
   edit: "edit files",
   read: "read files",
@@ -29,6 +30,20 @@ const ACTION: Record<string, string> = {
   browser: "use the browser",
   question: "ask a question",
   agent: "start a subagent",
+  // Claude Code tool names.
+  Bash: "run a command",
+  Edit: "edit files",
+  Write: "write files",
+  NotebookEdit: "edit files",
+  Read: "read files",
+  Glob: "search the project",
+  Grep: "search the project",
+  WebFetch: "fetch a web page",
+  WebSearch: "search the web",
+  Agent: "start a subagent",
+  Task: "start a subagent",
+  AskUserQuestion: "ask a question",
+  Skill: "use a skill",
 };
 
 /**

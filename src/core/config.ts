@@ -1,5 +1,5 @@
 /**
- * Plugin options, read from the `options` object in `opencode.json(c)`.
+ * Plugin options, shared by the OpenCode plugin and the Claude Code plugin.
  *
  * Everything is optional. The defaults target `pdg`, but any command that
  * accepts text on argv or stdin can be used instead.
@@ -45,9 +45,13 @@ function positiveInteger(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : fallback;
 }
 
-export function resolveConfig(options: Readonly<Record<string, unknown>>): Config {
+export function resolveConfig(
+  options: Readonly<Record<string, unknown>>,
+  defaultName: string = DEFAULTS.name,
+): Config {
+  const name = typeof options.name === "string" ? options.name.trim() : defaultName;
   return {
-    name: typeof options.name === "string" ? options.name.trim() : DEFAULTS.name,
+    name,
     command: command(options.command) ?? [...DEFAULTS.command],
     input: options.input === "stdin" ? "stdin" : DEFAULTS.input,
     maxWords: positiveInteger(options.maxWords, DEFAULTS.maxWords),

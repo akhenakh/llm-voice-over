@@ -1,8 +1,8 @@
 {
   "name": "opencode-voice-over",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
-  "description": "Spoken turn-end notifications for OpenCode, streamed through pdg",
+  "description": "Spoken turn-end notifications for OpenCode and Claude Code, streamed through pdg",
   "exports": {
     ".": "./src/index.ts"
   },
@@ -12,11 +12,17 @@
   ],
   "scripts": {
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "typecheck:claude": "tsc --noEmit -p tsconfig.claude.json",
+    "test:claude": "claude plugin test .",
+    "validate:claude": "claude plugin validate .",
+    "verify": "bun run typecheck && bun run typecheck:claude && bun test src && bun run validate:claude && bun run test:claude"
   },
   "keywords": [
     "opencode",
     "opencode-plugin",
+    "claude-code",
+    "claude-code-plugin",
     "tts",
     "pdg"
   ],

@@ -14,6 +14,11 @@ describe("resolveConfig", () => {
     });
   });
 
+  test("takes the platform default name", () => {
+    expect(resolveConfig({}, "claude").name).toBe("claude");
+    expect(resolveConfig({ name: "agent" }, "claude").name).toBe("agent");
+  });
+
   test("accepts another command as an array or a string", () => {
     expect(resolveConfig({ command: ["espeak-ng", "-s", "160"] }).command).toEqual([
       "espeak-ng",

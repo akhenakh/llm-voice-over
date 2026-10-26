@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { Config } from "./config.js";
+import type { Config } from "./core/config.js";
 import { Player } from "./player.js";
 
 const directory = mkdtempSync(join(tmpdir(), "voice-over-"));

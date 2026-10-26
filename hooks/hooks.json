@@ -1,0 +1,4 @@
+{
+  "description": "Spoken turn-end notifications",
+  "modules": ["./register.ts"]
+}
