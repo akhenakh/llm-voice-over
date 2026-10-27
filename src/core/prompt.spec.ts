@@ -21,6 +21,10 @@ describe("parsePromptRecord", () => {
     expect(parsePromptRecord("auto\tBash\t\n")).toEqual({ mode: "auto", tool: "Bash", fromAgent: false });
   });
 
+  test("keeps an empty mode, which the mod treats as unknown", () => {
+    expect(parsePromptRecord("\tBash\t")).toEqual({ mode: "", tool: "Bash", fromAgent: false });
+  });
+
   test("drops a record it cannot split or names no tool for", () => {
     expect(parsePromptRecord("")).toBeUndefined();
     expect(parsePromptRecord("prompt")).toBeUndefined();
@@ -42,6 +46,11 @@ describe("promptShows", () => {
     }
   });
 
+  test("stays quiet when the mode is missing", () => {
+    // No mode means no evidence that a dialog was drawn; stay quiet.
+    expect(promptShows({ ...SHOWN, mode: "" })).toBe(false);
+  });
+
   test("stays quiet when a subagent asks", () => {
     expect(promptShows({ ...SHOWN, fromAgent: true })).toBe(false);
   });
@@ -60,6 +69,12 @@ describe("questionShows", () => {
     for (const mode of ["default", "acceptEdits", "plan", "auto", "bypassPermissions"]) {
       expect(questionShows({ ...QUESTION, mode })).toBe(true);
     }
+  });
+
+  test("speaks the question dialog when the mode is missing", () => {
+    // The question dialog is drawn in every mode but dontAsk, so an unknown
+    // mode still shows it.
+    expect(questionShows({ ...QUESTION, mode: "" })).toBe(true);
   });
 
   test("stays quiet when dontAsk denies the question", () => {

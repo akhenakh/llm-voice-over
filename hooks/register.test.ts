@@ -183,6 +183,20 @@ test("keeps a mixed burst inside the first-sentence budget", async ($, on) => {
   ]);
 });
 
+test("stays silent when the record carries no mode", async ($, on) => {
+  const { runs, files, clock } = harness(on);
+  on("tool.check", () => ({ decision: "ask" }));
+
+  await $.session.start({ surface: "terminal", isInteractive: true, cwd: "/work" });
+  await $.tool.check({ tool: "Bash", input: { command: "ls" }, tool_use_id: "toolu_1" });
+  // Without a mode there is no evidence that the dialog was drawn.
+  files.set(PROMPT_SIGNAL, record(""));
+  await clock.advance(2000);
+  await settle();
+
+  expect(runs).toEqual([]);
+});
+
 test("stays silent when the permission mode answers the ask itself", async ($, on) => {
   const { runs, files, clock } = harness(on);
   on("tool.check", () => ({ decision: "ask" }));

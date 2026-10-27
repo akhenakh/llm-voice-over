@@ -11,7 +11,7 @@
 
 /** Three tab-separated fields: `mode`, `tool`, and the asking agent's id. */
 export interface PromptRecord {
-  /** The session's permission mode when the ask was made. */
+  /** The session's permission mode when the ask was made; empty when unknown. */
   mode: string;
   /** The tool whose call asked, as the model names it. */
   tool: string;
@@ -41,6 +41,8 @@ export const QUESTIONS = new Set(["AskUserQuestion"]);
 const QUESTION_DENYING_MODES = new Set(["dontAsk"]);
 
 export function promptShows(record: PromptRecord): boolean {
+  // A build that omits the mode leaves no evidence that a dialog was drawn.
+  if (!record.mode) return false;
   if (record.fromAgent) return false;
   if (SELF_ANSWERING_MODES.has(record.mode)) return false;
   return !QUESTIONS.has(record.tool);
