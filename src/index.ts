@@ -1,5 +1,3 @@
-import { appendFileSync } from "node:fs";
-
 import { Plugin } from "@opencode/plugin";
 
 import { resolveConfig } from "./core/config.js";
@@ -13,6 +11,7 @@ import {
   validate,
   type PermissionAsk,
 } from "./core/message.js";
+import { createDebug } from "./debug.js";
 import { Player } from "./player.js";
 
 const TOOL = "announce";
@@ -24,11 +23,9 @@ const TOOL = "announce";
 const PERMISSION_WINDOW_MS = 150;
 
 /** Set VOICE_OVER_DEBUG=/path/to/file to trace the queue and playback boundary. */
-const debugFile = process.env.VOICE_OVER_DEBUG;
-const debug = debugFile
-  ? (...parts: unknown[]) =>
-      appendFileSync(debugFile, `${new Date().toISOString()} ${parts.map((part) => String(part)).join(" ")}\n`)
-  : () => {};
+const debug = createDebug(process.env.VOICE_OVER_DEBUG, (error) => {
+  console.error(`[voice-over] debug log disabled: ${error}`);
+});
 
 const INPUT = {
   type: "object",
