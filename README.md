@@ -43,7 +43,9 @@ Other TTS commands work too; see [Options](#options).
    (`needs permission to run grep and python`), sorted and deduplicated across the pipelines and
    chains of the command; other prompts use the tool name (`needs permission to edit files`) rather
    than reading paths out loud. Calls that ask in the same burst, as parallel tool calls do, are
-   collected briefly and spoken as one sentence. In Claude Code an ask is not a prompt by itself:
+   collected briefly and spoken as one sentence, trimmed to the first-sentence budget: the
+   sentence names the asks that fit and ends with "and more" when the rest are on screen. In
+   Claude Code an ask is not a prompt by itself:
    auto mode's classifier and `dontAsk` answer it without showing a dialog, a headless run has none
    to show, and asking a question shows the question itself. A small `PermissionRequest` hook
    (`hooks/permission.sh`) records the ask with the session's mode and the tool; the mod speaks only

@@ -6,7 +6,7 @@ import {
   compose,
   isKind,
   permissionAbout,
-  permissionPhrases,
+  permissionText,
   questionText,
   validate,
 } from "./message.js";
@@ -97,19 +97,56 @@ describe("permissionAbout", () => {
   });
 });
 
-describe("permissionPhrases", () => {
+describe("permissionText", () => {
+  const text = (asks: Parameters<typeof permissionText>[1], overrides: Partial<Config> = {}) =>
+    permissionText("opencode", asks, { ...config, ...overrides });
+
   test("speaks a burst of asks as one sentence", () => {
     expect(
-      permissionPhrases([
+      text([
         { action: "shell", resources: ["python plot.py"] },
         { action: "shell", resources: ["grep -r foo ."] },
-        { action: "edit", resources: ["src/index.ts"] },
       ]),
-    ).toBe("edit files and run grep and python");
+    ).toBe("opencode: needs permission to run grep and python");
+  });
+
+  test("keeps a burst inside the first-sentence budget", () => {
+    // The prefix and the template take four of the nine words.
+    expect(text([{ action: "edit" }, { action: "shell", resources: ["npm test"] }])).toBe(
+      "opencode: needs permission to edit files and run npm",
+    );
+  });
+
+  test("says that other asks did not fit", () => {
+    const asks = ["edit", "read", "glob", "grep", "webfetch", "websearch"].map((action) => ({
+      action,
+    }));
+    expect(text(asks)).toBe("opencode: needs permission to edit files and more");
+  });
+
+  test("drops the asks after the last one that fits with the summary", () => {
+    expect(text([{ action: "edit" }, { action: "read" }], { maxFirstSentenceWords: 8 })).toBe(
+      "opencode: needs permission to edit files and more",
+    );
+  });
+
+  test("does not repeat an action two names read the same", () => {
+    expect(text([{ action: "glob" }, { action: "grep" }])).toBe(
+      "opencode: needs permission to search the project",
+    );
+    expect(text([{ action: "Edit" }, { action: "Write" }])).toBe(
+      "opencode: needs permission to edit files and write files",
+    );
+  });
+
+  test("falls back to a generic request when nothing fits", () => {
+    expect(text([{ action: "edit" }], { maxWords: 5, maxFirstSentenceWords: 5 })).toBe(
+      "opencode: needs permission to continue",
+    );
   });
 
   test("falls back to a generic request when nothing is known", () => {
-    expect(permissionPhrases([])).toBe("continue");
+    expect(text([])).toBe("opencode: needs permission to continue");
   });
 });
 

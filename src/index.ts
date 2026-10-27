@@ -9,7 +9,7 @@ import {
   cleanAbout,
   compose,
   isKind,
-  permissionPhrases,
+  permissionText,
   validate,
   type PermissionAsk,
 } from "./core/message.js";
@@ -116,7 +116,7 @@ export default Plugin.define({
       const burst = asks.get(sessionID);
       asks.delete(sessionID);
       if (burst === undefined || burst.length === 0) return;
-      const text = compose(config.name, "permission", permissionPhrases(burst));
+      const text = permissionText(config.name, burst, config);
       debug("event", "permission burst", sessionID, burst.length, "speaking", text);
       player.speak(text);
     };

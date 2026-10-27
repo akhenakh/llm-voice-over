@@ -160,6 +160,29 @@ test("speaks parallel permission prompts as one sentence", async ($, on) => {
   ]);
 });
 
+test("keeps a mixed burst inside the first-sentence budget", async ($, on) => {
+  const { runs, files, clock } = harness(on);
+  on("tool.check", () => ({ decision: "ask" }));
+
+  await $.session.start({ surface: "terminal", isInteractive: true, cwd: "/work" });
+  await $.tool.check({ tool: "Bash", input: { command: "grep -r foo ." }, tool_use_id: "toolu_1" });
+  await $.tool.check({ tool: "Edit", input: {}, tool_use_id: "toolu_2" });
+  await $.tool.check({ tool: "Read", input: {}, tool_use_id: "toolu_3" });
+  await $.tool.check({ tool: "WebFetch", input: {}, tool_use_id: "toolu_4" });
+
+  files.set(PROMPT_SIGNAL, record());
+  await clock.advance(200);
+  await settle();
+  await clock.advance(150);
+  await settle();
+
+  // Four actions do not fit the nine words pdg streams after; the sentence
+  // names the first and says the rest are on screen.
+  expect(runs).toEqual([
+    { argv: ["pdg", "claude: needs permission to run grep and more"], init: { timeoutMs: 120_000 } },
+  ]);
+});
+
 test("stays silent when the permission mode answers the ask itself", async ($, on) => {
   const { runs, files, clock } = harness(on);
   on("tool.check", () => ({ decision: "ask" }));

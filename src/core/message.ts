@@ -78,7 +78,7 @@ const MAX_PROGRAMS = 3;
  * The programs a set of shell resources runs, e.g. `["grep", "python"]`.
  * Sorted and deduplicated: a pipeline and a chain both end up as one list.
  */
-export function shellPrograms(resources: readonly string[]): string[] {
+function shellPrograms(resources: readonly string[]): string[] {
   const found = new Map<string, string>();
   for (const resource of resources) {
     for (const piece of commandLines(resource)) {
@@ -186,10 +186,12 @@ export function permissionAbout(action: string, resources: readonly string[] = [
 }
 
 /**
- * One phrase for a burst of asks: parallel tool calls each ask separately, but
- * the user hears a single sentence listing the distinct commands and actions.
+ * The phrases of a burst: parallel tool calls each ask separately, but the user
+ * hears a single sentence listing the distinct commands and actions. Different
+ * actions can read the same out loud (`Glob` and `Grep` both search the
+ * project), so the phrases are deduplicated too.
  */
-export function permissionPhrases(asks: readonly PermissionAsk[]): string {
+function permissionParts(asks: readonly PermissionAsk[]): string[] {
   const merged = new Map<string, string[]>();
   for (const ask of asks) {
     const resources = merged.get(ask.action) ?? [];
@@ -197,10 +199,46 @@ export function permissionPhrases(asks: readonly PermissionAsk[]): string {
     merged.set(ask.action, resources);
   }
 
-  const phrases = [...merged]
-    .sort(([left], [right]) => byName(left, right))
-    .map(([action, resources]) => permissionAbout(action, resources));
-  return joinList(phrases) || "continue";
+  const parts = new Map<string, string>();
+  for (const [action, resources] of [...merged].sort(([left], [right]) => byName(left, right))) {
+    const phrase = permissionAbout(action, resources);
+    const key = phrase.toLowerCase();
+    if (!parts.has(key)) parts.set(key, phrase);
+  }
+  return [...parts.values()];
+}
+
+/** Spoken when a burst is too long to name even its first ask. */
+const PERMISSION_FALLBACK = "continue";
+/** Signals on screen that other asks did not fit the sentence. */
+const MORE = "more";
+
+/**
+ * The sentence for a burst of permission asks, e.g.
+ * `opencode: needs permission to run grep and python`. Permission prompts are
+ * spoken while the dialog is on screen, so the sentence must fit the
+ * first-sentence budget: a burst that does not fit names the asks that do and
+ * ends with "and more", rather than holding the audio back.
+ */
+export function permissionText(
+  name: string,
+  asks: readonly PermissionAsk[],
+  config: Config,
+): string {
+  const parts = permissionParts(asks);
+  const fits = (about: string): boolean =>
+    validate(about, compose(name, "permission", about), config) === undefined;
+
+  const full = joinList(parts);
+  if (full && fits(full)) return compose(name, "permission", full);
+
+  const shown: string[] = [];
+  for (const part of parts) {
+    if (!fits(joinList([...shown, part, MORE]))) break;
+    shown.push(part);
+  }
+  if (shown.length === 0) return compose(name, "permission", PERMISSION_FALLBACK);
+  return compose(name, "permission", joinList([...shown, MORE]));
 }
 
 /** Spoken when a question dialog's headers cannot be read out as written. */

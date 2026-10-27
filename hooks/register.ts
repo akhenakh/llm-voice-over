@@ -32,7 +32,7 @@ import {
   cleanAbout,
   compose,
   isKind,
-  permissionPhrases,
+  permissionText,
   questionText,
   validate,
   type PermissionAsk,
@@ -130,7 +130,7 @@ function speakAsks($: EngineInterface, config: Config, enabled: boolean): void {
   const burst = asks;
   asks = [];
   if (burst.length === 0) return;
-  const text = compose(config.name, "permission", permissionPhrases(burst));
+  const text = permissionText(config.name, burst, config);
   debug($, enabled, "permission prompts", burst.length, text);
   play($, config, enabled, text);
 }
