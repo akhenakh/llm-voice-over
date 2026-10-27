@@ -60,10 +60,11 @@ the plugin up once per open project. Each copy reads the same event stream, so t
 only for the project that owns the session: a prompt in one tab is read out once, not once per open
 tab.
 
-The model announces only when the user has a reason to come back: the task is done, it is blocked
-on an answer, or a long task started earlier has finished. It skips ordinary chat turns,
-milestones, mid-work questions, and turns that end while a long task is still running. Permission
-prompts do not wait for the model: they interrupt the turn, so the plugin speaks them immediately.
+The model announces when the user has a reason to come back: the task is done, a question is
+answered however short, it is blocked on an answer, or a long task started earlier has finished.
+It skips milestones, mid-work questions, and turns that end while a long task is still running.
+Permission prompts do not wait for the model: they interrupt the turn, so the plugin speaks them
+immediately.
 
 One playback difference: OpenCode spawns a detached TTS process and kills the previous utterance
 when a new one arrives, so a permission prompt never waits. A Claude Code mod has no handle on a

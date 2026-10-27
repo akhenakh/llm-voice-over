@@ -13,11 +13,11 @@ The user is often away from the screen while you work. The \`announce\` tool spe
 
 Announce the end of a turn when the user has a reason to come back:
 - the requested work is done: files changed, commands run, research completed, the task delivered;
+- you answered a question or finished a lookup the user asked for, however short the answer;
 - you cannot continue without the user's answer, and the turn ends waiting for them (kind \`question\`);
 - a long command, build, or background task you started earlier has finished and you are reporting its result.
 
 Do not announce:
-- every turn: one-line answers, quick lookups, small edits, and chat replies are not worth speaking;
 - an intermediate milestone or the end of a phase of a larger task; announce when the task is actually done;
 - a turn that ends while a long task is still running; announce the turn that consumes its result;
 - a question you ask and then keep working past;
@@ -33,5 +33,5 @@ Examples:
 }
 
 export function toolDescription(config: Config): string {
-  return `Announce the end of this turn out loud when the user has a reason to come back: the task is done, you are blocked on their answer, or a long task you started earlier has finished. Do not announce every turn: skip chat replies, quick lookups, small edits, phase milestones, mid-work questions, permission prompts (the plugin speaks those itself), and turns that end while a long task is still running. \`about\` is a 2-7 word plain-language noun phrase with no code or paths; the first sentence must stay under ${config.maxFirstSentenceWords} words and the whole announcement under ${config.maxWords}.`;
+  return `Announce the end of this turn out loud when the user has a reason to come back: the task is done, you answered a question however short, you are blocked on their answer, or a long task you started earlier has finished. Skip phase milestones, mid-work questions, permission prompts (the plugin speaks those itself), and turns that end while a long task is still running. \`about\` is a 2-7 word plain-language noun phrase with no code or paths; the first sentence must stay under ${config.maxFirstSentenceWords} words and the whole announcement under ${config.maxWords}.`;
 }
