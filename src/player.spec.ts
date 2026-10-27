@@ -1,7 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import type { Config } from "./core/config.js";
 import { Player } from "./player.js";
@@ -67,6 +68,28 @@ describe("Player", () => {
     player.speak("second");
     expect(await waitFor(out, (content) => content.includes("second"))).toBe("first\nsecond\n");
     player.stop();
+  });
+
+  test("lets the server exit while the announcement keeps playing", async () => {
+    const out = join(directory, "detached.txt");
+    const script = join(directory, "detached.ts");
+    const player = fileURLToPath(new URL("./player.ts", import.meta.url));
+    const command = `sleep 2.5; printf done > ${out}`;
+    writeFileSync(
+      script,
+      `import { Player } from ${JSON.stringify(player)};\n` +
+        `const player = new Player({ name: "opencode", command: ["sh", "-c", ${JSON.stringify(command)}], input: "arg", maxWords: 20, maxFirstSentenceWords: 9, enabled: true });\n` +
+        `player.speak("opencode: finished work on the build");\n`,
+    );
+
+    // The helper embodies the server: it spawns the announcement and exits at
+    // once. A piped stderr would hold it open until the announcement ended.
+    const started = Date.now();
+    const helper = Bun.spawn([process.execPath, script], { stdout: "ignore", stderr: "ignore" });
+    expect(await helper.exited).toBe(0);
+    expect(Date.now() - started).toBeLessThan(1_500);
+
+    expect(await waitFor(out, () => true, 5_000)).toBe("done");
   });
 
   test.skipIf(!Bun.which("pdg"))("synthesizes through pdg", async () => {
