@@ -108,6 +108,10 @@ export { default } from "$PWD/src/index.ts"
 EOF
 ```
 
+The running server keeps the modules it loaded: after changing the plugin's source, `opencode
+reload` re-imports the entry but can reuse the previous `src/index.ts` and fail on a renamed
+export. Restart it (`opencode service restart`) to load a clean module graph.
+
 A real directory with an `index.ts` works too. Re-exported plugins cannot receive
 `opencode.json` options; the defaults below apply unless you change them in the source. Remove the
 file, or run `opencode plugin remove git+https://github.com/akhenakh/llm-voice-over.git`, or set
