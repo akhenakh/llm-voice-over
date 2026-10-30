@@ -63,6 +63,14 @@ const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
 const WRAPPER = new Set(["sudo", "env", "command", "time", "nohup", "exec"]);
 /** Directory changes are not worth naming, and their path must not be read. */
 const CWD = new Set(["cd", "chdir", "pushd", "popd", "push-location", "set-location"]);
+/**
+ * Keywords that end a block or open one: the line names no program of its own.
+ * A loop splits into its header (`for f in *.txt`, `case "$x" in`) and its
+ * closer (`done`, `fi`, `esac`), with the commands in the body between them.
+ */
+const BLOCK = new Set(["for", "select", "case", "function", "done", "fi", "esac"]);
+/** Keywords that introduce the command that follows on the same line. */
+const BLOCK_BODY = new Set(["do", "then", "else", "elif", "if", "while", "until"]);
 
 /**
  * Code, paths and identifiers do not read well out loud. Program names are an
@@ -142,7 +150,10 @@ function programName(piece: string): string | undefined {
   let index = 0;
   while (index < tokens.length) {
     const token = tokens[index]!;
-    if (ASSIGNMENT.test(token) || WRAPPER.has(token)) {
+    const keyword = token.toLowerCase();
+    // A loop's header and closer are syntax; only its body runs a program.
+    if (BLOCK.has(keyword)) return undefined;
+    if (BLOCK_BODY.has(keyword) || ASSIGNMENT.test(token) || WRAPPER.has(token)) {
       index += 1;
       continue;
     }

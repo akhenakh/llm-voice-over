@@ -95,6 +95,23 @@ describe("permissionAbout", () => {
   test("does not read a directory change out loud", () => {
     expect(permissionAbout("Bash", ["cd /home/akh/dev && python plot.py"])).toBe("run python");
   });
+
+  test("names the body of a loop instead of its keywords", () => {
+    expect(permissionAbout("Bash", ['for f in *.txt; do grep -l foo "$f"; done'])).toBe("run grep");
+    expect(permissionAbout("shell", ['while read -r line; do sed -i "s/a/b/" "$line"; done'])).toBe(
+      "run read and sed",
+    );
+  });
+
+  test("reads the command a conditional introduces", () => {
+    expect(permissionAbout("Bash", ["if test -f package.json; then npm run build; fi"])).toBe(
+      "run npm and test",
+    );
+  });
+
+  test("stays generic for a line that is only syntax", () => {
+    expect(permissionAbout("shell", ["done", "fi"])).toBe("run a command");
+  });
 });
 
 describe("permissionText", () => {
