@@ -1,6 +1,6 @@
 {
   "name": "opencode-voice-over",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "type": "module",
   "description": "Spoken turn-end notifications for OpenCode and Claude Code, streamed through pdg",
   "license": "MIT",
