@@ -41,7 +41,7 @@
       "type": "number",
       "title": "Maximum words in the first sentence",
       "description": "pdg starts streaming audio after the first sentence, so it must stay short.",
-      "default": 9,
+      "default": 20,
       "min": 1
     },
     "enabled": {

@@ -145,7 +145,7 @@ Claude Code 2.1.293 or later is required (mods). Set `enabled` to false, or
 | `command` | `["pdg"]` / `"pdg"` | array or string | string | Command and fixed arguments. A string is split on whitespace. |
 | `input` | `"arg"` | ✓ | ✓ | `"arg"` appends the sentence as the last argument; `"stdin"` pipes it. |
 | `maxWords` | `20` | ✓ | ✓ | Maximum words in the whole announcement. |
-| `maxFirstSentenceWords` | `9` | ✓ | ✓ | Maximum words in the first sentence. `pdg` starts streaming after it. |
+| `maxFirstSentenceWords` | `20` | ✓ | ✓ | Maximum words in the first sentence. `pdg` starts streaming after it. |
 | `enabled` | `true` | ✓ | ✓ | Load the plugin without announcing. |
 | `debug` | `false` | — | ✓ | Write a dim transcript line for each queued, dropped, and spoken announcement. |
 

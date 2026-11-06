@@ -16,7 +16,7 @@ const config: Config = {
   command: ["pdg"],
   input: "arg",
   maxWords: 20,
-  maxFirstSentenceWords: 9,
+  maxFirstSentenceWords: 20,
   enabled: true,
 };
 
@@ -128,7 +128,7 @@ describe("permissionText", () => {
   });
 
   test("keeps a burst inside the first-sentence budget", () => {
-    // The prefix and the template take four of the nine words.
+    // The prefix and the template take four words.
     expect(text([{ action: "edit" }, { action: "shell", resources: ["npm test"] }])).toBe(
       "opencode: needs permission to edit files and run npm",
     );
@@ -138,7 +138,9 @@ describe("permissionText", () => {
     const asks = ["edit", "read", "glob", "grep", "webfetch", "websearch"].map((action) => ({
       action,
     }));
-    expect(text(asks)).toBe("opencode: needs permission to edit files and more");
+    expect(text(asks, { maxFirstSentenceWords: 9 })).toBe(
+      "opencode: needs permission to edit files and more",
+    );
   });
 
   test("drops the asks after the last one that fits with the summary", () => {
@@ -194,8 +196,9 @@ describe("validate", () => {
   });
 
   test("rejects a long first sentence", () => {
-    const reason = check("the login redirect fix and the two failing tests that came with it");
-    expect(reason).toContain("first sentence");
+    const about = "the login redirect fix and the two failing tests that came with it";
+    const narrow = { ...config, maxFirstSentenceWords: 9 };
+    expect(validate(about, compose("opencode", "finished", about), narrow)).toContain("first sentence");
   });
 
   test("accepts a short first sentence followed by a second one", () => {

@@ -15,7 +15,7 @@ const base: Config = {
   command: ["pdg"],
   input: "arg",
   maxWords: 20,
-  maxFirstSentenceWords: 9,
+  maxFirstSentenceWords: 20,
   enabled: true,
 };
 
@@ -78,7 +78,7 @@ describe("Player", () => {
     writeFileSync(
       script,
       `import { Player } from ${JSON.stringify(player)};\n` +
-        `const player = new Player({ name: "opencode", command: ["sh", "-c", ${JSON.stringify(command)}], input: "arg", maxWords: 20, maxFirstSentenceWords: 9, enabled: true });\n` +
+        `const player = new Player({ name: "opencode", command: ["sh", "-c", ${JSON.stringify(command)}], input: "arg", maxWords: 20, maxFirstSentenceWords: 20, enabled: true });\n` +
         `player.speak("opencode: finished work on the build");\n`,
     );
 

@@ -25,7 +25,7 @@ const DEFAULTS: Config = {
   command: ["pdg"],
   input: "arg",
   maxWords: 20,
-  maxFirstSentenceWords: 9,
+  maxFirstSentenceWords: 20,
   enabled: true,
 };
 

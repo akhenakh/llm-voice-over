@@ -9,7 +9,7 @@ describe("resolveConfig", () => {
       command: ["pdg"],
       input: "arg",
       maxWords: 20,
-      maxFirstSentenceWords: 9,
+      maxFirstSentenceWords: 20,
       enabled: true,
     });
   });
@@ -43,7 +43,7 @@ describe("resolveConfig", () => {
     });
     expect(config.command).toEqual(["pdg"]);
     expect(config.maxWords).toBe(20);
-    expect(config.maxFirstSentenceWords).toBe(9);
+    expect(config.maxFirstSentenceWords).toBe(20);
     expect(config.enabled).toBe(false);
   });
 });

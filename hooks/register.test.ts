@@ -176,10 +176,12 @@ test("keeps a mixed burst inside the first-sentence budget", async ($, on) => {
   await clock.advance(150);
   await settle();
 
-  // Four actions do not fit the nine words pdg streams after; the sentence
-  // names the first and says the rest are on screen.
+  // All four actions fit the twenty words pdg streams after.
   expect(runs).toEqual([
-    { argv: ["pdg", "claude: needs permission to run grep and more"], init: { timeoutMs: 120_000 } },
+    {
+      argv: ["pdg", "claude: needs permission to run grep, edit files, read files and fetch a web page"],
+      init: { timeoutMs: 120_000 },
+    },
   ]);
 });
 
