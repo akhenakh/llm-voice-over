@@ -58,6 +58,8 @@ const SHELL_ACTIONS = new Set(["shell", "Bash"]);
 
 /** `a && b`, `a || b`, `a ; b`, `a | b`, `a & b`, or one command per line. */
 const COMMAND_SEPARATOR = /[;&|\n]/;
+/** Ends an unquoted heredoc delimiter, as a shell word boundary does. */
+const DELIMITER_END = /[\s;&|<>()]/;
 const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
 /** Prefixes that run another program; the spoken name is the one after them. */
 const WRAPPER = new Set(["sudo", "env", "command", "time", "nohup", "exec"]);
@@ -107,14 +109,49 @@ function byName(left: string, right: string): number {
   return a < b ? -1 : 1;
 }
 
-/** Splits a shell line on its operators, ignoring the ones inside quotes. */
+/** A heredoc body is file content, so it holds no command to name. */
+interface Heredoc {
+  /** The line that closes the body. */
+  delimiter: string;
+  /** `<<-` lets tabs indent the closing line. */
+  stripTabs: boolean;
+}
+
+/**
+ * Splits a shell line on its operators, ignoring the ones inside quotes and
+ * dropping the body of a heredoc. `cat > notes.md <<EOF` writes file content:
+ * neither the delimiter nor the lines it wraps are programs.
+ */
 function commandLines(resource: string): string[] {
   const lines: string[] = [];
   let current = "";
   let quote: string | undefined;
+  /** Heredocs opened on the line being read; their bodies start at its newline. */
+  const waiting: Heredoc[] = [];
+  let body: (Heredoc & { text: string }) | undefined;
+
+  const openBody = (): void => {
+    const heredoc = waiting[0];
+    body = heredoc ? { ...heredoc, text: "" } : undefined;
+  };
 
   for (let index = 0; index < resource.length; index += 1) {
     const char = resource[index]!;
+
+    if (body) {
+      if (char !== "\n") {
+        body.text += char;
+        continue;
+      }
+      const line = body.stripTabs ? body.text.replace(/^\t+/, "") : body.text;
+      if (line === body.delimiter) {
+        waiting.shift();
+        openBody();
+      } else {
+        body.text = "";
+      }
+      continue;
+    }
     if (quote) {
       current += char;
       if (char === quote) quote = undefined;
@@ -125,10 +162,20 @@ function commandLines(resource: string): string[] {
       current += char;
       continue;
     }
+    // `<<<` is a here-string: its argument is on the line, not in a body.
+    if (char === "<" && resource[index + 1] === "<" && resource[index + 2] !== "<") {
+      const heredoc = heredocAt(resource, index);
+      if (heredoc) {
+        waiting.push(heredoc.opened);
+        index = heredoc.end;
+        continue;
+      }
+    }
     if (COMMAND_SEPARATOR.test(char)) {
       lines.push(current);
       current = "";
       if ((char === "|" || char === "&") && resource[index + 1] === char) index += 1;
+      if (char === "\n" && waiting.length > 0) openBody();
       continue;
     }
     current += char;
@@ -136,6 +183,33 @@ function commandLines(resource: string): string[] {
 
   lines.push(current);
   return lines;
+}
+
+/**
+ * Reads the heredoc operator at `index`, e.g. `<<EOF`, `<<-EOF` or `<<'EOF'`,
+ * and returns the index of its last character.
+ */
+function heredocAt(text: string, index: number): { opened: Heredoc; end: number } | undefined {
+  let cursor = index + 2;
+  const stripTabs = text[cursor] === "-";
+  if (stripTabs) cursor += 1;
+  while (text[cursor] === " " || text[cursor] === "\t") cursor += 1;
+
+  const quote = text[cursor];
+  if (quote === '"' || quote === "'") {
+    const close = text.indexOf(quote, cursor + 1);
+    const delimiter = close < 0 ? "" : text.slice(cursor + 1, close);
+    if (!delimiter) return undefined;
+    return { opened: { delimiter, stripTabs }, end: close };
+  }
+  // `<<\EOF` quotes the delimiter too; the backslash is not part of it.
+  if (quote === "\\") cursor += 1;
+
+  let end = cursor;
+  while (end < text.length && !DELIMITER_END.test(text[end]!)) end += 1;
+  const delimiter = text.slice(cursor, end);
+  if (!delimiter) return undefined;
+  return { opened: { delimiter, stripTabs }, end: end - 1 };
 }
 
 /** The program a single command line runs, or undefined when it is not clear. */

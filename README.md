@@ -42,7 +42,8 @@ Other TTS commands work too; see [Options](#options).
    the user answers and the model cannot announce it. A shell prompt names the programs it needs
    (`needs permission to run grep and python`), sorted and deduplicated across the pipelines,
    chains and loop bodies of the command; shell keywords (`do`, `done`, `fi`) are structure, not
-   programs, so a `for ...; do grep ...; done` names `grep`. Other prompts use the tool name
+   programs, so a `for ...; do grep ...; done` names `grep`, and a heredoc body is file content,
+   so `cat > notes.md <<EOF ... EOF` names `cat`. Other prompts use the tool name
    (`needs permission to edit files`) rather than reading paths out loud. Calls that ask in the same burst, as parallel tool calls do, are
    collected briefly and spoken as one sentence, trimmed to the first-sentence budget: the
    sentence names the asks that fit and ends with "and more" when the rest are on screen. In

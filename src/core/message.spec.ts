@@ -112,6 +112,23 @@ describe("permissionAbout", () => {
   test("stays generic for a line that is only syntax", () => {
     expect(permissionAbout("shell", ["done", "fi"])).toBe("run a command");
   });
+
+  test("does not read a heredoc body as commands", () => {
+    expect(permissionAbout("shell", ["cat > notes.md <<'EOF'\n# Notes\ngrep foo\nEOF"])).toBe("run cat");
+    expect(permissionAbout("Bash", ["cat <<-EOF > out.txt\n\tbody\n\tEOF"])).toBe("run cat");
+    expect(permissionAbout("shell", ["cat <<A <<B\nfirst\nA\nsecond\nB"])).toBe("run cat");
+    expect(permissionAbout("Bash", ["cat > x <<\\EOF\nbody\nEOF"])).toBe("run cat");
+  });
+
+  test("names the commands that follow a heredoc body", () => {
+    expect(
+      permissionAbout("shell", ["cat <<EOF > out.txt\ntext\nEOF\nsed -i s/a/b/ out.txt"]),
+    ).toBe("run cat and sed");
+  });
+
+  test("does not take a here-string for a heredoc", () => {
+    expect(permissionAbout("Bash", ['sed "s/a/b/" <<< "$line"'])).toBe("run sed");
+  });
 });
 
 describe("permissionText", () => {
